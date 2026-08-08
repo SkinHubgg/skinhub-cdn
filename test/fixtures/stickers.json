@@ -1,0 +1,110 @@
+[
+	{
+		"id": "1",
+		"name": "Sticker | Shooter",
+		"image": "https://cdn.skinhub.gg/stickertex/stickers/dreamhack/sticker_dhacksteelseries_csgologo_psd_8299b27c.png",
+		"rarity": null,
+		"description": null,
+		"material": "dreamhack/dh_gologo1",
+		"is_patch": false,
+		"tournament_event_id": 1,
+		"tournament_team_id": null,
+		"tournament_player_id": null
+	},
+	{
+		"id": "2",
+		"name": "Sticker | Shooter (Foil)",
+		"image": "https://cdn.skinhub.gg/stickertex/stickers/dreamhack/sticker_dhacksteelseries_csgologo_psd_8299b27c.png",
+		"rarity": null,
+		"description": null,
+		"material": "dreamhack/dh_gologo1_holo",
+		"is_patch": false,
+		"tournament_event_id": 1,
+		"tournament_team_id": null,
+		"tournament_player_id": null
+	},
+	{
+		"id": "1653",
+		"name": "Sticker | Blood Boiler",
+		"image": "",
+		"rarity": "legendary",
+		"description": null,
+		"material": "community_mix01/blood_boiler",
+		"is_patch": false,
+		"tournament_event_id": null,
+		"tournament_team_id": null,
+		"tournament_player_id": null
+	},
+	{
+		"id": "4550",
+		"name": "Patch | Crazy Banana",
+		"image": "",
+		"rarity": "mythical",
+		"description": "<i>Agent for scale</i>",
+		"material": "case01/patch_banana",
+		"is_patch": true,
+		"tournament_event_id": null,
+		"tournament_team_id": null,
+		"tournament_player_id": null
+	},
+	{
+		"id": "13",
+		"name": "Sticker | Lucky 13",
+		"image": "https://cdn.skinhub.gg/stickertex/stickers/standard/thirteen_psd_cac37f41.png",
+		"rarity": "rare",
+		"description": null,
+		"material": "standard/thirteen",
+		"is_patch": false,
+		"tournament_event_id": null,
+		"tournament_team_id": null,
+		"tournament_player_id": null
+	},
+	{
+		"id": "380",
+		"name": "Sticker | pronax | Cologne 2015",
+		"image": "https://cdn.skinhub.gg/stickertex/stickers/cologne2015/sig_pronax_psd_9ff41ac9.png",
+		"rarity": "rare",
+		"description": "This sticker was autographed by professional player Markus Wallsten playing for Fnatic at ESL One Cologne 2015.\n\n50% of the proceeds from the sale of this sticker support the included players and organizations.",
+		"material": "cologne2015/sig_pronax",
+		"is_patch": false,
+		"tournament_event_id": 7,
+		"tournament_team_id": 6,
+		"tournament_player_id": 9419182
+	},
+	{
+		"id": "48",
+		"name": "Sticker | 3DMAX | Katowice 2014",
+		"image": "https://cdn.skinhub.gg/stickertex/stickers/emskatowice2014/sticker_3dmax_psd_f94cfaeb.png",
+		"rarity": "rare",
+		"description": null,
+		"material": "emskatowice2014/3dmax",
+		"is_patch": false,
+		"tournament_event_id": 3,
+		"tournament_team_id": 28,
+		"tournament_player_id": null
+	},
+	{
+		"id": "3",
+		"name": "Sticker | Shooter Close",
+		"image": "https://cdn.skinhub.gg/stickertex/stickers/dreamhack/sticker_dhacksteelseries_csgologo2_psd_243e7af5.png",
+		"rarity": null,
+		"description": null,
+		"material": "dreamhack/dh_gologo2",
+		"is_patch": false,
+		"tournament_event_id": 1,
+		"tournament_team_id": null,
+		"tournament_player_id": null
+	},
+	{
+		"id": "4",
+		"name": "Sticker | Shooter Close (Foil)",
+		"image": "https://cdn.skinhub.gg/stickertex/stickers/dreamhack/sticker_dhacksteelseries_csgologo2_psd_243e7af5.png",
+		"rarity": null,
+		"description": null,
+		"material": "dreamhack/dh_gologo2_holo",
+		"is_patch": false,
+		"tournament_event_id": 1,
+		"tournament_team_id": null,
+		"tournament_player_id": null
+	}
+]

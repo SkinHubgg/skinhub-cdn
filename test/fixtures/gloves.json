@@ -1,0 +1,32 @@
+[
+	{
+		"weapon_defindex": 0,
+		"paint": 0,
+		"image": "",
+		"paint_name": "Gloves | Default"
+	},
+	{
+		"weapon_defindex": 5031,
+		"paint": "1398",
+		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/slick_gloves_glove_driver_silk_dragon_white_light_png.png",
+		"paint_name": "★ Driver Gloves | Wave Chaser"
+	},
+	{
+		"weapon_defindex": 4725,
+		"paint": "10085",
+		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/studded_brokenfang_gloves_operation10_metalic_green_light_png.png",
+		"paint_name": "★ Broken Fang Gloves | Jade"
+	},
+	{
+		"weapon_defindex": 5031,
+		"paint": "1399",
+		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/slick_gloves_glove_driver_brocade_crane_red_light_png.png",
+		"paint_name": "★ Driver Gloves | Brocade Crane"
+	},
+	{
+		"weapon_defindex": 5031,
+		"paint": "1400",
+		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/slick_gloves_glove_driver_brocade_flower_red_light_png.png",
+		"paint_name": "★ Driver Gloves | Brocade Flowers"
+	}
+]

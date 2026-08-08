@@ -1,0 +1,30 @@
+[
+	{
+		"id": "2",
+		"name": "valve_02",
+		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/music_kits/valve_02_png.png",
+		"rarity": null,
+		"description": null
+	},
+	{
+		"id": "1",
+		"name": "Valve, Counter-Strike 2",
+		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/music_kits/valve_cs2_01_png.png",
+		"rarity": null,
+		"description": "The official music kit of Counter-Strike 2."
+	},
+	{
+		"id": "3",
+		"name": "Music Kit | Daniel Sadowski, Crimson Assault",
+		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/music_kits/danielsadowski_01_png.png",
+		"rarity": null,
+		"description": "Video Game Composer Daniel Sadowski delivers Edgy Action mixed with CRAZY FAT beats in this pulsating, exhilarating Music Pack."
+	},
+	{
+		"id": "4",
+		"name": "Music Kit | Noisia, Sharpened",
+		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/music_kits/noisia_01_png.png",
+		"rarity": null,
+		"description": "Dutch Electronic Trio Noisia brings a tough, cinematic feel with a unique blend of tradition and progression."
+	}
+]

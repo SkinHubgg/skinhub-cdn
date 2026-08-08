@@ -1,0 +1,30 @@
+[
+	{
+		"id": "1",
+		"name": "Charm | Lil' Ava",
+		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/keychains/missinglink/kc_missinglink_ava_png.png",
+		"rarity": "rare",
+		"description": null
+	},
+	{
+		"id": "83",
+		"name": "Charm | Budapest 2025 Highlight",
+		"image": "",
+		"rarity": "rare",
+		"description": "This souvenir charm commemorates the StarLadder Budapest 2025 CS2 Major Championship and features a highlight reel."
+	},
+	{
+		"id": "2",
+		"name": "Charm | That's Bananas",
+		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/keychains/missinglink/kc_missinglink_banana_png.png",
+		"rarity": "mythical",
+		"description": null
+	},
+	{
+		"id": "3",
+		"name": "Charm | Lil' Whiskers",
+		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/keychains/missinglink/kc_missinglink_cat_png.png",
+		"rarity": "mythical",
+		"description": null
+	}
+]

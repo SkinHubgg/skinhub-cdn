@@ -1,0 +1,56 @@
+[
+	{
+		"team": 2,
+		"image": "",
+		"model": "null",
+		"agent_name": "Agent | Default",
+		"id": null,
+		"rarity": null,
+		"description": null
+	},
+	{
+		"team": 3,
+		"image": "",
+		"model": "null",
+		"agent_name": "Agent | Default",
+		"id": null,
+		"rarity": null,
+		"description": null
+	},
+	{
+		"team": 2,
+		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/characters/customplayer_tm_professional_varf5_png.png",
+		"model": "tm_professional/tm_professional_varf5",
+		"agent_name": "Bloody Darryl The Strapped | The Professionals",
+		"id": "4613",
+		"rarity": "legendary",
+		"description": "Before he was leader of the heist gang 'The Professionals' Sir Bloody Darryl was more simply called, Bloody Darryl. Still your friendly neighborhood psychopath in every sense of the word. Not actually Australian according to Australians. \n\n<i>I'm just gonna give them a bit of Razzle Dazzle.</i>"
+	},
+	{
+		"team": 3,
+		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/characters/customplayer_ctm_st6_variantj_png.png",
+		"model": "ctm_st6/ctm_st6_variantj",
+		"agent_name": "'Blueberries' Buckshot | NSWC SEAL",
+		"id": "4619",
+		"rarity": "mythical",
+		"description": "Known as SEAL Team's \"Weapons Sommelier\" Buckshot has thoroughly field-tested and reviewed almost every available military weapon in staggering depth. ST6 relies on Buckshot's knowledge of lesser-known guns for edge case advantages in ground based operations.\n\nSeen here sporting the classic NUE Type 1 uniform otherwise known as 'blueberries'. \n\n<i>They talk to me. The guns. They have feelings.</i>"
+	},
+	{
+		"team": 3,
+		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/characters/customplayer_ctm_st6_variantl_png.png",
+		"model": "ctm_st6/ctm_st6_variantl",
+		"agent_name": "'Two Times' McCoy | TACP Cavalry",
+		"id": "4680",
+		"rarity": "legendary",
+		"description": "'Two Times' McCoy earned his nickname by completing TACP's field training twice. Official records mark this up to a scheduling mix-up, but his teammates report restraining him from completing the trifecta.\n\nWith inhuman reserves of physical and mental stamina, McCoy often finds himself the last person standing at the end of any conflict—physical and verbal alike.\n\nHis yellow scarf is a tribute to his time with 1st Cavalry Division.\n\n<i>Yep. Still here.</i>"
+	},
+	{
+		"team": 3,
+		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/characters/customplayer_ctm_swat_variante_png.png",
+		"model": "ctm_swat/ctm_swat_variante",
+		"agent_name": "Cmdr. Mae 'Dead Cold' Jamison | SWAT",
+		"id": "4711",
+		"rarity": "ancient",
+		"description": "Cmdr. 'Dead Cold' Jamison has just about seen it all. Skeptical and wry in the midst of deadly combat, others could mistake her for being nonchalant about the chaos at hand. They would be wrong. Nothing gets past Dead Cold, not bad guys with AK-47s, junior officers that call her 'Ma'am,' or an opportunity to make elite officers smirk under pressure.\n\n<i>You're gonna find out.</i>"
+	}
+]

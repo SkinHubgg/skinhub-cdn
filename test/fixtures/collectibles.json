@@ -1,0 +1,37 @@
+[
+	{
+		"id": "1004",
+		"name": "Museum Map Coin",
+		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/status_icons/maptoken_museum_png.png",
+		"rarity": "ancient",
+		"description": null
+	},
+	{
+		"id": "4986",
+		"name": "Premier Season One Medal",
+		"image": "",
+		"rarity": "ancient",
+		"description": "This is a commemorative Premier Medal awarded for your active participation in Premier Season One."
+	},
+	{
+		"id": "874",
+		"name": "5 Year Veteran Coin",
+		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/status_icons/5yearcoin_png.png",
+		"rarity": "ancient",
+		"description": "Has been a member of the Counter-Strike community for over 5 years."
+	},
+	{
+		"id": "875",
+		"name": "Champion at DreamHack 2013",
+		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/status_icons/dreamhack_2013_champion_png.png",
+		"rarity": "ancient",
+		"description": "This championship trophy was awarded to the Champion at The 2013 DreamHack SteelSeries CS:GO Championship."
+	},
+	{
+		"id": "876",
+		"name": "Finalist at DreamHack 2013",
+		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/status_icons/dreamhack_2013_finalist_png.png",
+		"rarity": "ancient",
+		"description": "This championship trophy was awarded to the Finalist at The 2013 DreamHack SteelSeries CS:GO Championship."
+	}
+]

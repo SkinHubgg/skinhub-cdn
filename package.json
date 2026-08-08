@@ -1,0 +1,100 @@
+{
+	"name": "@skinhub/cdn",
+	"version": "0.1.0",
+	"description": "Typed data layer over the SkinHub CS2 CDN — skins, stickers, gloves, agents, music kits, keychains, collectibles and items_game, fetched at runtime with pluggable caching. Plus the CS2 inspect-link codec.",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"bun": "./src/index.ts",
+			"import": "./dist/index.js"
+		},
+		"./skins": {
+			"types": "./dist/datasets/skins.d.ts",
+			"bun": "./src/datasets/skins.ts",
+			"import": "./dist/datasets/skins.js"
+		},
+		"./stickers": {
+			"types": "./dist/datasets/stickers.d.ts",
+			"bun": "./src/datasets/stickers.ts",
+			"import": "./dist/datasets/stickers.js"
+		},
+		"./gloves": {
+			"types": "./dist/datasets/gloves.d.ts",
+			"bun": "./src/datasets/gloves.ts",
+			"import": "./dist/datasets/gloves.js"
+		},
+		"./agents": {
+			"types": "./dist/datasets/agents.d.ts",
+			"bun": "./src/datasets/agents.ts",
+			"import": "./dist/datasets/agents.js"
+		},
+		"./music": {
+			"types": "./dist/datasets/music.d.ts",
+			"bun": "./src/datasets/music.ts",
+			"import": "./dist/datasets/music.js"
+		},
+		"./keychains": {
+			"types": "./dist/datasets/keychains.d.ts",
+			"bun": "./src/datasets/keychains.ts",
+			"import": "./dist/datasets/keychains.js"
+		},
+		"./collectibles": {
+			"types": "./dist/datasets/collectibles.d.ts",
+			"bun": "./src/datasets/collectibles.ts",
+			"import": "./dist/datasets/collectibles.js"
+		},
+		"./items-game": {
+			"types": "./dist/datasets/items-game.d.ts",
+			"bun": "./src/datasets/items-game.ts",
+			"import": "./dist/datasets/items-game.js"
+		},
+		"./placement": {
+			"types": "./dist/placement.d.ts",
+			"bun": "./src/placement.ts",
+			"import": "./dist/placement.js"
+		},
+		"./inspect": {
+			"types": "./dist/inspect.d.ts",
+			"bun": "./src/inspect.ts",
+			"import": "./dist/inspect.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"files": ["dist", "src", "README.md"],
+	"sideEffects": false,
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/SkinHubgg/skinhub-cdn.git"
+	},
+	"homepage": "https://github.com/SkinHubgg/skinhub-cdn#readme",
+	"bugs": {
+		"url": "https://github.com/SkinHubgg/skinhub-cdn/issues"
+	},
+	"keywords": ["cs2", "counter-strike", "skins", "stickers", "cdn", "inspect-url", "items_game"],
+	"publishConfig": {
+		"access": "public"
+	},
+	"engines": {
+		"node": ">=18"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"build": "rm -rf dist && tsc -p tsconfig.build.json",
+		"test": "bun test",
+		"test:live": "SKINHUB_CDN_LIVE=1 bun test test/live.test.ts",
+		"test:full": "SKINHUB_CDN_FIXTURES=../asset-export/out/data bun test",
+		"release": "bash scripts/release.sh",
+		"prepublishOnly": "bun run typecheck && bun run build"
+	},
+	"dependencies": {
+		"cs2-inspect-lib": "^4.1.0"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"typescript": "^5"
+	}
+}

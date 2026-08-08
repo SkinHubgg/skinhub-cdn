@@ -1,0 +1,496 @@
+# @skinhub/cdn
+
+Typed data layer over the CS2 game data published to the SkinHub CDN — skins, stickers, gloves,
+agents, music kits, charms, collectibles and Valve's own `items_game` — plus the CS2 inspect-link
+codec.
+
+The data is **fetched at runtime, never bundled**. The eight files are about 16 MB; shipping them
+inside a dependency would be worse than the problem they solve. If you want an offline copy, you
+supply it (see [Fallbacks](#fallbacks)).
+
+```bash
+bun add @skinhub/cdn
+```
+
+```ts
+import { fetchSkins } from '@skinhub/cdn'
+
+const skins = await fetchSkins()
+skins.length // 2126
+```
+
+Works on a server and in a browser. No Node built-ins, no top-level `await` on import, no global
+state you did not ask for.
+
+---
+
+## Contents
+
+- [What it serves](#what-it-serves)
+- [Configuring the origin](#configuring-the-origin)
+- [Fetching](#fetching)
+- [Caching](#caching)
+- [Fallbacks](#fallbacks)
+- [Errors](#errors)
+- [Entry points and bundle size](#entry-points-and-bundle-size)
+- [The types](#the-types)
+- [Inspect links and placement](#inspect-links-and-placement)
+- [API reference](#api-reference)
+- [Development](#development)
+
+---
+
+## What it serves
+
+Eight files under `data/` on the CDN. Row counts are from the export current at the time of writing.
+
+| helper | file | rows | size | shape |
+|---|---|---:|---:|---|
+| `fetchSkins` | `skins.json` | 2,126 | 4.2 MB | `Skin[]` |
+| `fetchStickers` | `stickers.json` | 11,788 | 5.5 MB | `Sticker[]` |
+| `fetchCollectibles` | `collectibles.json` | 715 | 212 KB | `Collectible[]` |
+| `fetchKeychains` | `keychains.json` | 143 | 40 KB | `Keychain[]` |
+| `fetchMusicKits` | `music.json` | 101 | 40 KB | `MusicKit[]` |
+| `fetchGloves` | `gloves.json` | 95 | 24 KB | `Glove[]` |
+| `fetchAgents` | `agents.json` | 81 | 52 KB | `Agent[]` |
+| `fetchItemsGame` | `items_game.json` | — | 6.5 MB | `{ items_game: … }` |
+
+Anything else on the CDN — `manifest.json`, a file added after this release — is reachable with
+`fetchCdnJson(path)` and `fetchCdnData(file)`, so you are never blocked on a release here.
+
+```ts
+import { fetchCdnJson, fetchCdnData } from '@skinhub/cdn'
+
+await fetchCdnJson<Manifest>('manifest.json')  // <origin>/manifest.json
+await fetchCdnData<Row[]>('something-new.json') // <origin>/data/something-new.json
+```
+
+---
+
+## Configuring the origin
+
+Four sources, highest priority first:
+
+| # | source | example |
+|---|---|---|
+| 1 | the call | `fetchSkins({ origin: 'http://localhost:8787' })` |
+| 2 | `configureCdn` | `configureCdn({ origin: 'https://cdn.example' })` |
+| 3 | environment | `SKINHUB_CDN_URL=https://cdn.example` |
+| 4 | default | `https://cdn.skinhub.gg` |
+
+**On the client, use (1) or (2).** Bundlers only inline the environment variables they are told to —
+Next.js inlines `NEXT_PUBLIC_*`, Vite inlines `VITE_*` — so a browser bundle relying on
+`SKINHUB_CDN_URL` silently falls through to the default. This is not a limitation to work around;
+`configureCdn` is the supported path.
+
+```ts
+// app/providers.tsx — once, at startup
+import { configureCdn } from '@skinhub/cdn'
+
+configureCdn({ origin: process.env.NEXT_PUBLIC_CDN_URL })
+```
+
+`configureCdn({ origin: undefined })` clears it again. The environment is read off
+`globalThis.process?.env`, so nothing throws in a browser that has no `process` at all.
+
+URL builders, if you need to point an `<img>` or a `<link rel="preload">` at the CDN yourself:
+
+```ts
+import { cdnUrl, dataUrl, resolveCdnOrigin } from '@skinhub/cdn'
+
+resolveCdnOrigin()                  // 'https://cdn.skinhub.gg'
+cdnUrl('manifest.json')             // 'https://cdn.skinhub.gg/manifest.json'
+dataUrl('skins.json')               // 'https://cdn.skinhub.gg/data/skins.json'
+cdnUrl('x.png', 'https://a.test/')  // 'https://a.test/x.png'  — slashes never double up
+```
+
+---
+
+## Fetching
+
+Every dataset helper takes the same options, all optional:
+
+```ts
+await fetchSkins({
+  origin: 'https://cdn.example',  // this call only
+  cache: myCache,                 // or `false` to disable; default is a shared in-memory cache
+  ttlMs: 5 * 60_000,              // default 1 hour
+  fallback: bundledSkins,         // returned instead of throwing
+  onError: err => log(err),       // called when a fallback absorbs an error
+  fetch: instrumentedFetch,       // inject your own
+  signal: controller.signal,
+  init: { headers: { … } },       // merged into the RequestInit, wins over our defaults
+})
+```
+
+Two behaviours worth knowing:
+
+- **Requests are sent with `cache: 'no-cache'`.** `data/*.json` keeps the same filename across every
+  export and the origin serves it `max-age=60, stale-while-revalidate=300`, so a plain `fetch` can
+  hand back a heuristically-fresh copy and never see a new export. `no-cache` forces a conditional
+  request and reuses the cached body on a `304` — one round trip, no payload. Override with
+  `init: { cache: 'default' }`.
+- **Concurrent calls for the same URL share one request.** Three components asking for `skins.json`
+  on the same tick cost one 4.2 MB download.
+
+---
+
+## Caching
+
+Caching is yours, not ours. The interface is two methods:
+
+```ts
+interface CdnCache {
+  get(key: string): unknown | undefined | Promise<unknown | undefined>
+  set(key: string, value: unknown, ttlMs: number): void | Promise<void>
+}
+```
+
+The default is a shared in-memory cache with a 1-hour TTL and a 32-entry cap, created lazily. Good
+enough for a browser tab or a single-process server, and it needs no configuration.
+
+**Redis:**
+
+```ts
+import Redis from 'ioredis'
+import { fetchSkins, type CdnCache } from '@skinhub/cdn'
+
+const redis = new Redis(process.env.REDIS_URL!)
+
+const redisCache: CdnCache = {
+  async get(key) {
+    const raw = await redis.get(key)
+    return raw === null ? undefined : JSON.parse(raw)
+  },
+  async set(key, value, ttlMs) {
+    await redis.set(key, JSON.stringify(value), 'PX', ttlMs)
+  },
+}
+
+const skins = await fetchSkins({ cache: redisCache, ttlMs: 24 * 60 * 60 * 1000 })
+```
+
+**Next.js**, letting the framework cache instead:
+
+```ts
+import { unstable_cache } from 'next/cache'
+import { fetchSkins } from '@skinhub/cdn'
+
+export const getSkins = unstable_cache(() => fetchSkins({ cache: false }), ['skins'], {
+  revalidate: 3600,
+})
+```
+
+**None at all:** `fetchSkins({ cache: false })`.
+
+Other knobs: `createMemoryCache({ ttlMs, max })` for an isolated instance, `getDefaultCache()` and
+`clearDefaultCache()` for the shared one — the latter is what you call after an export lands.
+
+> A cached value is the **parsed** array, shared by reference between callers. Treat it as
+> read-only, or pass `cache: false` if you intend to mutate.
+
+---
+
+## Fallbacks
+
+Pass `fallback` and a failure returns it instead of throwing. This is how you keep the CDN off your
+startup critical path:
+
+```ts
+import bundledGloves from './gloves.snapshot.json'
+import { fetchGloves } from '@skinhub/cdn'
+
+const gloves = await fetchGloves({
+  fallback: bundledGloves,
+  onError: err => logger.warn({ err }, 'gloves: serving the bundled snapshot'),
+})
+```
+
+Without `onError` the error goes to `console.warn`. A fallback is **not** cached, so the next call
+retries the CDN.
+
+---
+
+## Errors
+
+One error class. `CdnError` carries the URL, the HTTP status, and the response's content type.
+
+```ts
+import { fetchSkins, isCdnError } from '@skinhub/cdn'
+
+try {
+  await fetchSkins()
+} catch (error) {
+  if (isCdnError(error)) {
+    error.url          // 'https://cdn.skinhub.gg/data/skins.json'
+    error.status       // 404, or undefined if the request never completed
+    error.contentType  // 'text/html'
+  }
+}
+```
+
+`contentType` is on there for a reason: the origin is behind Cloudflare, and a **missing key returns
+a 27 KB HTML page**, not JSON. Code that goes straight to `response.json()` reports that as
+`SyntaxError: Unexpected token '<'`, which sends you debugging your parser instead of reading the
+404. This package checks the status first and tells you what actually happened.
+
+---
+
+## Entry points and bundle size
+
+`sideEffects: false`, ESM, and a subpath per dataset. Import one list and you get one list.
+
+| import | contents |
+|---|---|
+| `@skinhub/cdn` | config, cache, errors, fetch, and all eight dataset helpers |
+| `@skinhub/cdn/skins` | `fetchSkins` + the skin types |
+| `@skinhub/cdn/stickers` `…/gloves` `…/agents` `…/music` `…/keychains` `…/collectibles` `…/items-game` | one dataset each |
+| `@skinhub/cdn/placement` | placement types, normalisation, the WeaponPaints row format — **no dependencies** |
+| `@skinhub/cdn/inspect` | inspect-link encode/decode — **server-only**, see below |
+
+Measured with a real bundler against `dist`:
+
+| a consumer that imports | target | result |
+|---|---|---|
+| `fetchGloves` from `@skinhub/cdn/gloves` | browser | ~4.5 KB, and no trace of the other seven datasets |
+| everything from `@skinhub/cdn` | browser | ~7.8 KB |
+| `buildInspectUrl` from `@skinhub/cdn/inspect` | node | **~29 MB** |
+| `buildInspectUrl` from `@skinhub/cdn/inspect` | browser | **does not build** |
+
+### `@skinhub/cdn/inspect` is server-only
+
+The inspect codec wraps [`cs2-inspect-lib`](https://www.npmjs.com/package/cs2-inspect-lib), whose
+dependency list includes `steam-user` and `node-cs2` for a Game Coordinator round trip this package
+never makes. It reaches them through an `await import()` inside a method, which bundlers still
+follow — so bundling it for the browser fails on `tls`, `dns` and `readline`, and bundling it for
+Node produces about 29 MB.
+
+That is exactly why it is a separate entry point. `import { fetchSkins } from '@skinhub/cdn'`
+touches none of it, and the data layer builds for the web cleanly. If you need to build inspect URLs
+in a browser today, do it on your server and send the string down.
+
+`@skinhub/cdn/placement` is the dependency-free half — placement types, normalisation and the
+WeaponPaints row format, no protobuf — and bundles anywhere.
+
+---
+
+## The types
+
+Derived from the real exported files and checked against them by the test suite, which validates
+every row and **fails on a field the types do not describe**. Some consequences you should know
+about, because each one is a bug waiting in code written against a looser type:
+
+**`skins.json` has 20 "vanilla" rows** — the knives with no finish, `skin-vanilla-weapon_bayonet`
+and friends. On those rows:
+
+- `pattern`, `min_float`, `max_float` and `paint_index` are **`null`**
+- `souvenir`, `wears` and `collections` are **absent keys**, not `null`
+
+```ts
+const skins = await fetchSkins()
+for (const skin of skins) {
+  skin.pattern?.name          // null on 20 rows
+  skin.collections ?? []      // undefined on those same 20
+}
+```
+
+**`phase` is on 181 of 2,126 rows**, and absent — never null — on the rest. It is
+`'Phase 1' | … | 'Black Pearl'` widened so a new phase is not a compile error.
+
+**`gloves.json` has one row where `paint` is a `number`** (the `Gloves | Default` row); the other 94
+are strings. Join it against `Skin['paint_index']` through `String()`.
+
+**`agents.json` has two rows where `model` is the four-character string `"null"`**, not `null` and
+not `''`. Check for it before building a model path.
+
+**`music.json` has `rarity: null` on every row.** The field exists for shape compatibility; do not
+branch on it.
+
+**Images can be the empty string.** `''` means the export has no icon for that row and is
+deliberate — a URL that 404s would be worse. It is common: 643 of 11,788 stickers, 190 of 715
+collectibles, and some collection and crate icons.
+
+```ts
+{sticker.image ? <img src={sticker.image} /> : <Placeholder />}
+```
+
+**`items_game.json` is not an array.** It is `{ items_game: { …33 sections… } }` — Valve's KeyValues
+converted to JSON. The section names are typed so `data.items_game.paint_kits` autocompletes; the
+values are `unknown`, because writing an interface for a file that changes with every CS2 update
+would be inventing structure the file does not guarantee.
+
+Rarity tokens (`'rare' | 'mythical' | …`) and other string unions are **open** — they autocomplete
+to the values in the current export but still accept a new one, so a CS2 update does not become a
+compile error in your app.
+
+---
+
+## Inspect links and placement
+
+Encode and decode CS2 inspect links, and read/write the placement format the
+[CS2 WeaponPaints plugin](https://github.com/Nereziel/cs2-WeaponPaints) stores.
+
+```ts
+import { buildInspectUrl, readInspectUrl, toGameCommand, isLegacyInspectUrl } from '@skinhub/cdn/inspect'
+
+const url = buildInspectUrl({
+  defindex: 7,          // AK-47
+  paintindex: 44,       // Case Hardened
+  paintseed: 661,
+  paintwear: 0.154,
+  stattrak: true,
+  stattrak_count: 1337,
+  nametag: 'blue gem',
+  stickers: [{ slot: 0, sticker_id: 7691, wear: 0.25, scale: 0.8, rotation: 12, offset_x: 0.1, offset_y: -0.2 }],
+  keychain: { slot: 0, sticker_id: 21, offset_x: 1.5, offset_y: -2.25, offset_z: 0.125, pattern: 41 },
+})
+// 'steam://rungame/730/…/+csgo_econ_action_preview%2000180720…'
+
+toGameCommand(url)  // 'csgo_econ_action_preview 00180720…' — paste into the CS2 console
+readInspectUrl(url) // back to a SkinPlacement, all five sticker slots present
+```
+
+`readInspectUrl` handles **masked** links only — the `+csgo_econ_action_preview <hex>` form that
+carries the item data. The unmasked `S…A…D…` / `M…A…D…` market and inventory links needed a Game
+Coordinator round trip Valve has shut down, so there is nothing to read out of them. Check first:
+
+```ts
+if (isLegacyInspectUrl(input)) {
+  // no item data in this link — ask the user for a masked one
+}
+```
+
+### Placement is stored in the game's own field names
+
+`slot`, `sticker_id`, `wear`, `scale`, `rotation`, `offset_x`, `offset_y`, `offset_z`, `pattern` —
+`CEconItemPreviewDataBlock.Sticker` verbatim, nothing renamed or negated. Offsets are UV space
+centred on the slot anchor, `-0.5 … 0.5`, which is the shader's own `g_vStickerNOffset` range. If
+your UI works in `0 … 1`, convert with `offsetFromNormalized` / `normalizedFromOffset`.
+
+### Everything is quantised at the boundary
+
+`makeSkinPlacement` runs on the way into `toEconItem`, so a caller cannot hand the wire a value the
+game will reject:
+
+- ids and seeds (`defindex`, `paintindex`, `paintseed`, `sticker_id`, `pattern`, `stattrak_count`)
+  go through `u32` — truncated, clamped, unsigned. The WeaponPaints plugin parses these with
+  `uint.TryParse`, which **silently skips** an item whose id carries a sign, a decimal point or an
+  exponent: the sticker just never appears in game, with no error anywhere.
+- floats go through `Math.fround`, because they are protobuf `float`s.
+- a `sticker_id` of `0` normalises the whole slot to empty, dropping offsets left behind by a
+  removed sticker — a state no inspect link can represent.
+
+A practical consequence: `paintwear: 0.154` is a float64, and the wire holds float32. Normalise once
+and the value is stable forever after:
+
+```ts
+import { makeSkinPlacement } from '@skinhub/cdn/placement'
+
+const item = makeSkinPlacement(fromYourForm)  // paintwear becomes 0.15399999916553497
+readInspectUrl(buildInspectUrl(item))         // deep-equals `item`
+```
+
+### WeaponPaints database rows
+
+`wp_player_skins` column formats, `id;schema;x;y;wear;scale;rotation` and `id;x;y;z;seed`:
+
+```ts
+import { formatStickerRow, parseStickerRow, formatKeychainRow, parseKeychainRow } from '@skinhub/cdn/placement'
+
+formatStickerRow(placement)      // '7691;0;0.1;-0.2;0.25;0.8;12'
+parseStickerRow(row, slot)       // -> StickerPlacement; malformed or null input gives an empty slot
+```
+
+Floats are written at the shortest decimal that reads back as the same float32 — `0.3`, not
+`0.30000001192092896` — because seven of the latter overflow the plugin's `varchar(128)` column and
+the extra digits carry no information.
+
+`migrateLegacyKeychainRow(row)` rewrites charm rows written by the pre-2026 schema, which stored
+`id;-x;1;-y;seed` into an `id;x;y;z;seed` column. It returns `null` for rows that are already
+correct, so a migration using it is safe to re-run.
+
+---
+
+## API reference
+
+### Config
+`configureCdn` · `resolveCdnOrigin` · `getConfiguredOrigin` · `normalizeOrigin` · `cdnUrl` ·
+`dataUrl` · `SKINHUB_CDN_DEFAULT_ORIGIN` · `SKINHUB_CDN_ENV_VAR`
+
+### Fetching
+`fetchSkins` · `fetchStickers` · `fetchGloves` · `fetchAgents` · `fetchMusicKits` ·
+`fetchKeychains` · `fetchCollectibles` · `fetchItemsGame` · `fetchCdnData` · `fetchCdnJson` ·
+`inFlightCount`
+
+File-name constants, if you are keying a cache or a preload by them: `SKINS_FILE`, `STICKERS_FILE`,
+`GLOVES_FILE`, `AGENTS_FILE`, `MUSIC_FILE`, `KEYCHAINS_FILE`, `COLLECTIBLES_FILE`,
+`ITEMS_GAME_FILE`.
+
+### Caching
+`createMemoryCache` · `getDefaultCache` · `clearDefaultCache` · `DEFAULT_TTL_MS` · `CdnCache`
+
+### Errors
+`CdnError` · `isCdnError`
+
+### Types
+`Skin` · `Skins` · `SkinPhase` · `SkinWeapon` · `SkinCategory` · `SkinPattern` · `SkinRarity` ·
+`SkinWear` · `SkinCollection` · `SkinCrate` · `SkinTeam` · `Sticker` · `Stickers` · `Glove` ·
+`Gloves` · `Agent` · `Agents` · `AgentTeam` · `MusicKit` · `MusicKits` · `Keychain` · `Keychains` ·
+`Collectible` · `Collectibles` · `ItemsGame` · `ItemsGameSection` · `RarityToken` · `ImageUrl` ·
+`CdnFetchOptions` · `DatasetOptions` · `FetchLike`
+
+### `@skinhub/cdn/placement`
+`makeSkinPlacement` · `makeStickerPlacement` · `makeKeychainPlacement` · `emptySticker` ·
+`emptyKeychain` · `formatStickerRow` · `parseStickerRow` · `formatKeychainRow` · `parseKeychainRow` ·
+`migrateLegacyKeychainRow` · `offsetFromNormalized` · `normalizedFromOffset` · `f32` · `u32` ·
+`clamp` · `clampStickerOffset` · `shortFloat` · `STICKER_SLOTS` · `SkinPlacement` ·
+`StickerPlacement` · `KeychainPlacement`
+
+### `@skinhub/cdn/inspect`
+`buildInspectUrl` · `readInspectUrl` · `toEconItem` · `fromEconItem` · `toGameCommand` ·
+`isLegacyInspectUrl` · `EconItem` — plus everything from `/placement`, re-exported.
+
+---
+
+## Development
+
+```bash
+bun install
+bun run typecheck   # tsc --noEmit, over src + test + scripts
+bun test            # offline; fixtures + unit + bundle tests
+bun run build       # rm -rf dist && tsc -p tsconfig.build.json
+```
+
+Two extra tiers, both opt-in because they need something the repo does not carry:
+
+```bash
+# Validate the types against the full 16 MB export rather than the committed fixtures
+SKINHUB_CDN_FIXTURES=/path/to/asset-export/out/data bun test
+
+# Hit the real CDN
+bun run test:live
+```
+
+`test/fixtures/` holds a small sample of each real file, chosen so every edge case documented above
+appears in it — the vanilla skins, the numeric glove `paint`, the `"null"` agent models, an empty
+image, every nullable field null at least once. `test/types.test.ts` asserts both that the fixtures
+validate and that those edge cases are actually present, so the validator cannot pass by being fed
+easy rows.
+
+### Releasing
+
+```bash
+bun run release              # patch
+bun run release minor
+bun run release 1.2.0
+bun run release patch --dry-run
+```
+
+Bumps the version, publishes, then commits and tags — and deliberately does **not** push; it prints
+the command. It refuses to run on a dirty tree, refuses a version already on the registry, and
+restores the previous version if typecheck, build or publish fails. `prepublishOnly` runs typecheck
+and a clean build, so `npm publish` by hand cannot ship a broken package either.
+
+## License
+
+MIT

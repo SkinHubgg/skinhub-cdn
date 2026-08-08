@@ -1,0 +1,26 @@
+# secrets — this repo is PUBLIC
+.env
+.env.*
+!.env.example
+*.pem
+.npmrc
+
+# build output
+dist/
+*.tsbuildinfo
+
+# dependencies
+node_modules/
+
+# packed tarballs
+*.tgz
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# coverage / logs
+coverage/
+*.log

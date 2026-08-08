@@ -1,0 +1,1065 @@
+{
+	"items_game": {
+		"game_info": {
+			"first_valid_class": 2,
+			"last_valid_class": 3
+		},
+		"rarities": {
+			"default": {
+				"value": 0,
+				"loc_key": "Rarity_Default",
+				"loc_key_weapon": "Rarity_Default_Weapon",
+				"loc_key_character": "Rarity_Default_Character",
+				"color": "desc_default",
+				"drop_sound": "EndMatch.ItemRevealRarityCommon"
+			},
+			"common": {
+				"value": 1,
+				"loc_key": "Rarity_Common",
+				"loc_key_weapon": "Rarity_Common_Weapon",
+				"loc_key_character": "Rarity_Common_Character",
+				"color": "desc_common",
+				"weight": 10000000,
+				"next_rarity": "uncommon",
+				"drop_sound": "EndMatch.ItemRevealRarityCommon"
+			}
+		},
+		"qualities": {
+			"normal": {
+				"value": 0,
+				"weight": 1,
+				"hexColor": "#B2B2B2"
+			},
+			"genuine": {
+				"value": 1,
+				"weight": 180,
+				"hexColor": "#4D7455"
+			}
+		},
+		"colors": {
+			"desc_level": {
+				"color_name": "ItemAttribLevel",
+				"hex_color": "#756b5e"
+			},
+			"desc_attrib_neutral": {
+				"color_name": "ItemAttribNeutral",
+				"hex_color": "#b2b5b8"
+			}
+		},
+		"graffiti_tints": {
+			"brick_red": {
+				"id": 1,
+				"hex_color": "#874444"
+			},
+			"blood_red": {
+				"id": 2,
+				"hex_color": "#b14d4d"
+			}
+		},
+		"player_loadout_slots": {
+			"0": "LOADOUT_POSITION_MELEE",
+			"1": "LOADOUT_POSITION_C4"
+		},
+		"alternate_icons2": {
+			"casket_icons": {
+				"1": {
+					"icon_path": "econ/tools/casket_rio2022_0"
+				},
+				"2": {
+					"icon_path": "econ/tools/casket_rio2022_1"
+				}
+			}
+		},
+		"prefabs": {
+			"weapon_supports_keychains": {
+				"capabilities": {
+					"can_keychain": 1
+				},
+				"keychains": "single"
+			},
+			"weapon_supports_stickers": {
+				"capabilities": {
+					"can_sticker": 1
+				},
+				"stickers": "weapon"
+			}
+		},
+		"items": {
+			"1": {
+				"name": "weapon_deagle",
+				"prefab": "weapon_deagle_prefab",
+				"item_quality": "normal",
+				"baseitem": 1,
+				"flexible_loadout_slot": "secondary4",
+				"flexible_loadout_default": 1,
+				"item_shares_equip_slot": 1
+			},
+			"2": {
+				"name": "weapon_elite",
+				"prefab": "weapon_elite_prefab",
+				"item_quality": "normal",
+				"baseitem": 1,
+				"flexible_loadout_slot": "secondary1",
+				"flexible_loadout_default": 1
+			}
+		},
+		"attributes": {
+			"1": {
+				"name": "always tradable",
+				"attribute_class": "always_tradable",
+				"description_format": "value_is_additive",
+				"description_string": "#Attrib_AlwaysTradable",
+				"hidden": 1,
+				"effect_type": "positive",
+				"stored_as_integer": 1
+			},
+			"2": {
+				"name": "cannot trade",
+				"attribute_class": "cannot_trade",
+				"description_format": "value_is_additive",
+				"description_string": "#Attrib_CannotTrade",
+				"hidden": 1,
+				"effect_type": "negative",
+				"stored_as_integer": 1
+			}
+		},
+		"sticker_kits": {
+			"0": {
+				"name": "default",
+				"item_name": "#StickerKit_Default",
+				"description_string": "#StickerKit_Desc_Default"
+			},
+			"1": {
+				"name": "dh_gologo1",
+				"item_name": "#StickerKit_dh_gologo1",
+				"description_string": "#StickerKit_desc_dh_gologo1",
+				"sticker_material": "dreamhack/dh_gologo1",
+				"tournament_event_id": 1
+			}
+		},
+		"paint_kits": {
+			"0": {
+				"name": "default",
+				"description_string": "#PaintKit_Default",
+				"description_tag": "#PaintKit_Default_Tag",
+				"wear_gradient": "canvas",
+				"wear_default": 0.1,
+				"wear_remap_min": 0.06,
+				"wear_remap_max": 0.8,
+				"seed": 0,
+				"style": 0
+			},
+			"2": {
+				"name": "so_olive",
+				"description_string": "#PaintKit_so_olive",
+				"description_tag": "#PaintKit_so_olive_Tag",
+				"wear_default": 0.2,
+				"style": 1
+			}
+		},
+		"paint_kits_rarity": {
+			"so_olive": "common",
+			"so_red": "uncommon"
+		},
+		"item_sets": {
+			"set_community_3": {
+				"name": "#CSGO_set_community_3",
+				"set_description": "#CSGO_set_community_3_desc",
+				"is_collection": 1,
+				"items": {
+					"[cu_tec9_asiimov]weapon_tec9": 1,
+					"[cu_ssg08_immortal]weapon_ssg08": 1,
+					"[cu_retribution]weapon_elite": 1,
+					"[hy_galil_kami]weapon_galilar": 1,
+					"[cu_p90_scorpius]weapon_p90": 1,
+					"[am_nitrogen]weapon_cz75a": 1,
+					"[am_gyrate]weapon_cz75a": 1,
+					"[an_royalbleed]weapon_p90": 1,
+					"[cu_p2000_pulse]weapon_hkp2000": 1,
+					"[cu_aug_progressiv]weapon_aug": 1,
+					"[cu_bizon_antique]weapon_bizon": 1,
+					"[cu_mac10_decay]weapon_mac10": 1,
+					"[cu_xm1014_heaven_guard]weapon_xm1014": 1,
+					"[cu_korupt]weapon_mac10": 1,
+					"[am_m4a1-s_alloy_orange]weapon_m4a1_silencer": 1,
+					"[cu_scar_cyrex]weapon_scar20": 1,
+					"[cu_usp_spitfire]weapon_usp_silencer": 1,
+					"[cu_kaiman]weapon_usp_silencer": 1,
+					"[cu_ak47_rubber]weapon_ak47": 1,
+					"[cu_titanstorm]weapon_m4a1": 1
+				},
+				"unusuals": {
+					"unique": "community_case_3_unusual",
+					"strange": "community_case_3_unusual"
+				}
+			},
+			"set_weapons_i": {
+				"name": "#CSGO_set_weapons_i",
+				"set_description": "#CSGO_set_weapons_i_desc",
+				"is_collection": 1,
+				"items": {
+					"[hy_skulls]weapon_mp7": 1,
+					"[hy_feathers_aug]weapon_aug": 1,
+					"[so_purple]weapon_sg556": 1,
+					"[am_dragon_glock]weapon_glock": 1,
+					"[am_zebra_dark]weapon_usp_silencer": 1,
+					"[am_zebra_dark]weapon_m4a1_silencer": 1,
+					"[aq_oiled]weapon_ak47": 1,
+					"[aa_vertigo]weapon_deagle": 1,
+					"[am_lightning_awp]weapon_awp": 1
+				},
+				"unusuals": {
+					"unique": "unusual_revolving_list",
+					"strange": "unusual_revolving_list"
+				}
+			}
+		},
+		"client_loot_lists": {
+			"set_nuke_2_common": {
+				"[hy_blueprint_white]weapon_bizon": 1,
+				"[hy_blueprint_red]weapon_p250": 1,
+				"[hy_blueprint_bluered]weapon_ump45": 1,
+				"[hy_ducts_green]weapon_fiveseven": 1,
+				"[hy_ducts_grey]weapon_nova": 1
+			},
+			"set_nuke_2_uncommon": {
+				"[am_circuitboard_silver]weapon_m4a1": 1,
+				"[am_circuitboard_green]weapon_mp7": 1,
+				"[hy_ducts_yellow]weapon_negev": 1,
+				"[hy_nuclear_skulls_aqua]weapon_galilar": 1
+			}
+		},
+		"revolving_loot_lists": {
+			"1": "crate_valve_1",
+			"2": "crate_esports_2013"
+		},
+		"quest_reward_loot_lists": {
+			"1": "set_dust",
+			"2": "set_aztec"
+		},
+		"item_levels": {
+			"KillEaterRank": {
+				"0": {
+					"score": 2
+				},
+				"1": {
+					"score": 4
+				},
+				"2": {
+					"score": 6
+				},
+				"3": {
+					"score": 8
+				},
+				"4": {
+					"score": 10
+				},
+				"5": {
+					"score": 12
+				},
+				"6": {
+					"score": 14
+				},
+				"7": {
+					"score": 16
+				},
+				"8": {
+					"score": 18
+				},
+				"9": {
+					"score": 20
+				},
+				"10": {
+					"score": 22
+				},
+				"11": {
+					"score": 24
+				},
+				"12": {
+					"score": 26
+				}
+			}
+		},
+		"kill_eater_score_types": {
+			"0": {
+				"type_name": "Kills",
+				"model_attribute": "stattrak model"
+			},
+			"1": {
+				"type_name": "OCMVPs"
+			}
+		},
+		"music_definitions": {
+			"1": {
+				"name": "valve_cs2_01",
+				"loc_name": "#musickit_valve_cs2_01",
+				"loc_description": "#musickit_valve_cs2_01_desc",
+				"image_inventory": "econ/music_kits/valve_cs2_01",
+				"pedestal_display_model": "models/inventory_items/music_kits/music_kit_valve_cs2_01.vmdl"
+			},
+			"2": {
+				"name": "valve_02",
+				"loc_name": "#musickit_valve_csgo_02",
+				"loc_description": "#musickit_valve_csgo_02_desc",
+				"image_tooltip": "tooltip_image_01",
+				"image_inventory": "econ/music_kits/valve_02",
+				"pedestal_display_model": "models/inventory_items/music_kits/music_kit_valve_02.vmdl"
+			}
+		},
+		"quest_definitions": {
+			"11": {
+				"name": "Casual Kills: SMG",
+				"loc_name": "#Quest_Weapon_Mode",
+				"loc_description": "#Quest_Weapon_Mode_desc",
+				"gamemode": "casual",
+				"expression": "%weapon_smg% && %act_kill_human%"
+			},
+			"12": {
+				"name": "Casual Kills: Secondary",
+				"loc_name": "#Quest_Weapon_Mode",
+				"loc_description": "#Quest_Weapon_Mode_desc",
+				"gamemode": "casual",
+				"expression": " %weapon_secondary% && %act_kill_human% "
+			}
+		},
+		"recurring_mission_periods": {
+			"mission_periods": {
+				"0": "1741741200,1761699600",
+				"34": "1762308000,1772589600",
+				"52": "1773190800,1793149200",
+				"86": "1793757600,1804644000",
+				"105": "1805245200,1825203600",
+				"139": "1825812000,1836093600",
+				"157": "1836694800,1856653200",
+				"191": "1857261600,1867543200",
+				"209": "1868144400,1888102800",
+				"243": "1888711200,1898992800",
+				"261": "1899594000,1919552400",
+				"295": "1920160800,1930442400",
+				"313": "1931043600,1951002000",
+				"347": "1951610400,1962496800",
+				"366": "1963098000,1983056400",
+				"400": "1983664800,1993946400",
+				"418": "1994547600,2014506000",
+				"452": "2015114400,2025396000",
+				"470": "2025997200,2045955600",
+				"504": "2046564000,2056845600",
+				"522": "2057446800,2077405200",
+				"556": "2078013600,2088295200",
+				"574": "2088896400,2108854800",
+				"608": "2109463200,2119744800",
+				"626": "2120346000,2140304400",
+				"660": "2140912800,2151799200",
+				"679": "2152400400,2172358800",
+				"713": "2172967200,2183248800",
+				"731": "2183850000,2203808400",
+				"765": "2204416800,2214698400",
+				"783": "2215299600,2235258000",
+				"817": "2235866400,2246148000",
+				"835": "2246749200,2266707600",
+				"869": "2267316000,2277597600",
+				"887": "2278198800,2298157200",
+				"921": "2298765600,2309047200",
+				"939": "2309648400,2329606800",
+				"973": "2330215200,2341101600"
+			},
+			"mission_period_length": 604800
+		},
+		"campaign_definitions": {
+			"1": {
+				"2": {
+					"quest_index": 102,
+					"->": 10
+				},
+				"4": {
+					"quest_index": 104,
+					"->": 5
+				},
+				"5": {
+					"quest_index": 105,
+					"->": 6
+				},
+				"6": {
+					"quest_index": 106,
+					"->": 7
+				},
+				"7": {
+					"quest_index": 107,
+					"->": 21
+				},
+				"8": {
+					"quest_index": 108,
+					"->": 9
+				},
+				"9": {
+					"quest_index": 109
+				},
+				"10": {
+					"quest_index": 110,
+					"->": 16
+				},
+				"11": {
+					"quest_index": 111,
+					"->": 12
+				},
+				"12": {
+					"quest_index": 112,
+					"->": 13
+				},
+				"13": {
+					"quest_index": 113,
+					"->": 22
+				},
+				"14": {
+					"quest_index": 114,
+					"->": 15
+				},
+				"15": {
+					"quest_index": 115
+				},
+				"16": {
+					"quest_index": 116,
+					"->": 17
+				},
+				"17": {
+					"quest_index": 117,
+					"->": 18
+				},
+				"18": {
+					"quest_index": 118,
+					"->": 23
+				},
+				"19": {
+					"quest_index": 119,
+					"->": 20
+				},
+				"20": {
+					"quest_index": 120
+				},
+				"21": {
+					"quest_index": 121,
+					"->": 8
+				},
+				"22": {
+					"quest_index": 122,
+					"->": 14
+				},
+				"23": {
+					"quest_index": 123,
+					"->": 19
+				},
+				"loc_name": "#csgo_campaign_eurasia",
+				"loc_description": "#csgo_campaign_eurasia_desc",
+				"season_number": 4
+			},
+			"2": {
+				"1": {
+					"quest_index": 201,
+					"->": 9
+				},
+				"3": {
+					"quest_index": 203,
+					"->": 4
+				},
+				"4": {
+					"quest_index": 204,
+					"->": 5
+				},
+				"5": {
+					"quest_index": 205,
+					"->": 6
+				},
+				"6": {
+					"quest_index": 206,
+					"->": 20
+				},
+				"7": {
+					"quest_index": 207,
+					"->": 8
+				},
+				"8": {
+					"quest_index": 208
+				},
+				"9": {
+					"quest_index": 209,
+					"->": 15
+				},
+				"10": {
+					"quest_index": 210,
+					"->": 11
+				},
+				"11": {
+					"quest_index": 211,
+					"->": 12
+				},
+				"12": {
+					"quest_index": 212,
+					"->": 21
+				},
+				"13": {
+					"quest_index": 213,
+					"->": 14
+				},
+				"14": {
+					"quest_index": 214
+				},
+				"15": {
+					"quest_index": 215,
+					"->": 16
+				},
+				"16": {
+					"quest_index": 216,
+					"->": 17
+				},
+				"17": {
+					"quest_index": 217,
+					"->": 12
+				},
+				"18": {
+					"quest_index": 218,
+					"->": 19
+				},
+				"19": {
+					"quest_index": 219
+				},
+				"20": {
+					"quest_index": 220,
+					"->": 7
+				},
+				"21": {
+					"quest_index": 221,
+					"->": 13
+				},
+				"22": {
+					"quest_index": 222,
+					"->": 18
+				},
+				"loc_name": "#csgo_campaign_vanguard",
+				"loc_description": "#csgo_campaign_vanguard_desc",
+				"season_number": 4
+			}
+		},
+		"skirmish_modes": {
+			"1": {
+				"name": "stabstabzap",
+				"loc_name": "Skirmish_CC_SSZ_name",
+				"loc_rules": "Skirmish_CC_SSZ_rules",
+				"loc_description": "Skirmish_CC_SSZ_desc",
+				"loc_details": "Skirmish_CC_SSZ_details",
+				"icon": "icon-skirmish-ssz",
+				"gamemode": "casual",
+				"server_exec": "execwithwhitelist op08_stab_stab_zap.cfg"
+			},
+			"2": {
+				"name": "dm_freeforall",
+				"loc_name": "Skirmish_DM_FFA_name",
+				"loc_rules": "Skirmish_DM_FFA_rules",
+				"loc_description": "Skirmish_DM_FFA_desc",
+				"loc_details": "Skirmish_DM_FFA_details",
+				"icon": "icon-skirmish-ffa",
+				"gamemode": "deathmatch",
+				"server_exec": "execwithwhitelist gamemode_dm_freeforall.cfg"
+			}
+		},
+		"skirmish_rank_info": {
+			"1": {
+				"pips": 2,
+				"winstreak": 3,
+				"loss": 0
+			},
+			"3": {
+				"pips": 3
+			}
+		},
+		"recipes": {
+			"0": {
+				"name": "#RT_MP_A",
+				"n_A": "#RI_R1p",
+				"desc_inputs": "#RDI_AB",
+				"desc_outputs": "#RDO_AB",
+				"di_A": 10,
+				"di_B": "#RI_R1p",
+				"do_A": 1,
+				"do_B": "#RI_R2",
+				"all_same_class": 0,
+				"always_known": 1,
+				"premium_only": 0,
+				"disabled": 0,
+				"input_items": {
+					"10": {
+						"conditions": {
+							"0": {
+								"field": "*rarity",
+								"operator": "string==",
+								"value": "common",
+								"required": 1
+							},
+							"1": {
+								"field": "*quality",
+								"operator": "string==",
+								"value": "unique,tournament",
+								"required": 1
+							},
+							"2": {
+								"field": "craft_class",
+								"operator": "string==",
+								"value": "weapon",
+								"required": 1
+							}
+						}
+					}
+				},
+				"output_items": {
+					"item1": {
+						"conditions": {
+							"0": {
+								"field": "*match_set_rarity",
+								"operator": "string==",
+								"value": "uncommon",
+								"required": 1
+							}
+						}
+					}
+				},
+				"category": "crafting",
+				"filter": -3
+			},
+			"1": {
+				"name": "#RT_MP_A",
+				"n_A": "#RI_R2p",
+				"desc_inputs": "#RDI_AB",
+				"desc_outputs": "#RDO_AB",
+				"di_A": 10,
+				"di_B": "#RI_R2p",
+				"do_A": 1,
+				"do_B": "#RI_R3",
+				"all_same_class": 0,
+				"always_known": 1,
+				"premium_only": 0,
+				"disabled": 0,
+				"input_items": {
+					"10": {
+						"conditions": {
+							"0": {
+								"field": "*rarity",
+								"operator": "string==",
+								"value": "uncommon",
+								"required": 1
+							},
+							"1": {
+								"field": "*quality",
+								"operator": "string==",
+								"value": "unique,tournament",
+								"required": 1
+							},
+							"2": {
+								"field": "craft_class",
+								"operator": "string==",
+								"value": "weapon",
+								"required": 1
+							}
+						}
+					}
+				},
+				"output_items": {
+					"item1": {
+						"conditions": {
+							"0": {
+								"field": "*match_set_rarity",
+								"operator": "string==",
+								"value": "rare",
+								"required": 1
+							}
+						}
+					}
+				},
+				"category": "crafting",
+				"filter": -3
+			}
+		},
+		"seasonaloperations": {
+			"8": {
+				"quest_looping_track": 1,
+				"quest_reward": {
+					"[0]": {
+						"item_name": "CommunitySeasonNine2019 Coin 1",
+						"ui_order": 3
+					},
+					"[*]": {
+						"none": "none"
+					},
+					"item_name": "character_operator_dossier_op09_ancient",
+					"ui_order": 1,
+					"ui_image": "operations/op9/char_pack_op09_ancient",
+					"ui_image_inspect": "operations/op9/op9_graffiti_pack_01_inspect",
+					"ui_image_thumbnail": "operations/op9/char_pack_thumbnail_op09_ancient",
+					"none": "none",
+					"callout": "#CSGO_character_operator_dossier_op09_ancient_short"
+				},
+				"quest_mission_card": {
+					"id": 8016,
+					"name": "#UI_Operation09_MissionCard_16",
+					"quests": "locked",
+					"operational_points": 6
+				},
+				"xp_reward": "lootlist_xpgrant"
+			},
+			"9": {
+				"quest_mission_card": {
+					"id": 9016,
+					"name": "#UI_Operation10_MissionCard_16",
+					"quests": "locked",
+					"operational_points": 6
+				},
+				"xp_reward": "lootlist_xpgrant",
+				"operational_point_redeemable": {
+					"points": 5,
+					"item_name": "character_operator_dossier_op10_rare",
+					"ui_order": 1,
+					"ui_image_thumbnail": "operations/op10/char_pack_thumbnail_op10_rare",
+					"ui_image": "operations/op10/char_pack_op10_rare",
+					"ui_image_inspect": "operations/op10/op10_graffiti_pack_inspect",
+					"flags": 2,
+					"callout": "#CSGO_character_operator_dossier_op09_rare_short"
+				}
+			}
+		},
+		"pro_event_results": {
+			"1": {
+				"place_names": {
+					"1": "#Place_Name_1st",
+					"2": "#Place_Name_2nd",
+					"3": "#Place_Name_3rd-4th",
+					"4": "#Place_Name_5th-8th",
+					"5": "#Place_Name_9th-12th",
+					"6": "#Place_Name_13th-16th"
+				},
+				"team_places": {
+					"10": 4,
+					"11": 5,
+					"12": 6,
+					"13": 5,
+					"14": 6,
+					"15": 6,
+					"16": 5,
+					"06": 1,
+					"01": 2,
+					"04": 3,
+					"03": 3,
+					"09": 4,
+					"08": 4,
+					"02": 4,
+					"07": 5,
+					"05": 6
+				}
+			},
+			"3": {
+				"place_names": {
+					"1": "#Place_Name_1st",
+					"2": "#Place_Name_2nd",
+					"3": "#Place_Name_3rd-4th",
+					"4": "#Place_Name_5th-8th",
+					"5": "#Place_Name_9th-12th",
+					"6": "#Place_Name_13th-16th"
+				},
+				"team_places": {
+					"12": 6,
+					"24": 3,
+					"25": 4,
+					"26": 4,
+					"27": 5,
+					"28": 5,
+					"29": 6,
+					"30": 5,
+					"31": 1,
+					"32": 6,
+					"01": 2,
+					"09": 3,
+					"03": 4,
+					"06": 4,
+					"07": 5,
+					"05": 6
+				}
+			}
+		},
+		"pro_players": {
+			"36": {
+				"name": "Sf",
+				"code": "sf",
+				"dob": "-",
+				"geo": "FR",
+				"events": {
+					"3": {
+						"team": 7
+					},
+					"4": {
+						"team": 35
+					}
+				}
+			},
+			"2791": {
+				"name": "Hiko",
+				"code": "hiko",
+				"dob": "1990-03-06",
+				"geo": "US",
+				"events": {
+					"1": {
+						"team": 3
+					},
+					"3": {
+						"team": 3
+					},
+					"4": {
+						"team": 33
+					},
+					"5": {
+						"team": 33
+					},
+					"8": {
+						"team": 48,
+						"clutch_kills": 3,
+						"pistol_kills": 9,
+						"opening_kills": 2,
+						"sniper_kills": 0,
+						"KDR": 0.756098,
+						"enemy_kills": 31,
+						"deaths": 41,
+						"matches_played": 2,
+						"stage0": {
+							"clutch_kills": 2,
+							"pistol_kills": 6,
+							"opening_kills": 2,
+							"sniper_kills": 0,
+							"KDR": 0.869565,
+							"enemy_kills": 20,
+							"deaths": 23,
+							"matches_played": 1
+						},
+						"stage1": {
+							"clutch_kills": 1,
+							"pistol_kills": 3,
+							"opening_kills": 0,
+							"sniper_kills": 0,
+							"KDR": 0.611111,
+							"enemy_kills": 11,
+							"deaths": 18,
+							"matches_played": 1
+						}
+					},
+					"9": {
+						"team": 48,
+						"clutch_kills": 22,
+						"pistol_kills": 19,
+						"opening_kills": 7,
+						"sniper_kills": 0,
+						"KDR": 1.048951,
+						"enemy_kills": 150,
+						"deaths": 143,
+						"matches_played": 7,
+						"stage0": {
+							"clutch_kills": 0,
+							"pistol_kills": 2,
+							"opening_kills": 4,
+							"sniper_kills": 0,
+							"KDR": 1,
+							"enemy_kills": 16,
+							"deaths": 16,
+							"matches_played": 1
+						},
+						"stage1": {
+							"clutch_kills": 6,
+							"pistol_kills": 5,
+							"opening_kills": 2,
+							"sniper_kills": 0,
+							"KDR": 1.230769,
+							"enemy_kills": 32,
+							"deaths": 26,
+							"matches_played": 1
+						},
+						"stage3": {
+							"clutch_kills": 2,
+							"pistol_kills": 2,
+							"opening_kills": 1,
+							"sniper_kills": 0,
+							"KDR": 1.214286,
+							"enemy_kills": 34,
+							"deaths": 28,
+							"matches_played": 2
+						},
+						"stage4": {
+							"clutch_kills": 12,
+							"pistol_kills": 9,
+							"opening_kills": 0,
+							"sniper_kills": 0,
+							"KDR": 0.978723,
+							"enemy_kills": 46,
+							"deaths": 47,
+							"matches_played": 2
+						},
+						"stage5": {
+							"clutch_kills": 2,
+							"pistol_kills": 1,
+							"opening_kills": 0,
+							"sniper_kills": 0,
+							"KDR": 0.846154,
+							"enemy_kills": 22,
+							"deaths": 26,
+							"matches_played": 1
+						}
+					},
+					"10": {
+						"team": 48,
+						"clutch_kills": 11,
+						"pistol_kills": 27,
+						"opening_kills": 19,
+						"sniper_kills": 2,
+						"KDR": 0.885246,
+						"enemy_kills": 162,
+						"deaths": 183,
+						"matches_played": 11,
+						"stage0": {
+							"clutch_kills": 2,
+							"pistol_kills": 5,
+							"opening_kills": 2,
+							"sniper_kills": 0,
+							"KDR": 2.1,
+							"enemy_kills": 21,
+							"deaths": 10,
+							"matches_played": 1
+						},
+						"stage1": {
+							"clutch_kills": 1,
+							"pistol_kills": 2,
+							"opening_kills": 2,
+							"sniper_kills": 0,
+							"KDR": 0.647059,
+							"enemy_kills": 11,
+							"deaths": 17,
+							"matches_played": 1
+						},
+						"stage2": {
+							"clutch_kills": 3,
+							"pistol_kills": 2,
+							"opening_kills": 4,
+							"sniper_kills": 0,
+							"KDR": 0.818182,
+							"enemy_kills": 27,
+							"deaths": 33,
+							"matches_played": 2
+						},
+						"stage3": {
+							"clutch_kills": 2,
+							"pistol_kills": 11,
+							"opening_kills": 5,
+							"sniper_kills": 2,
+							"KDR": 0.903846,
+							"enemy_kills": 47,
+							"deaths": 52,
+							"matches_played": 3
+						},
+						"stage4": {
+							"clutch_kills": 1,
+							"pistol_kills": 4,
+							"opening_kills": 4,
+							"sniper_kills": 0,
+							"KDR": 0.842105,
+							"enemy_kills": 32,
+							"deaths": 38,
+							"matches_played": 2
+						},
+						"stage5": {
+							"clutch_kills": 2,
+							"pistol_kills": 3,
+							"opening_kills": 2,
+							"sniper_kills": 0,
+							"KDR": 0.727273,
+							"enemy_kills": 24,
+							"deaths": 33,
+							"matches_played": 2
+						}
+					},
+					"11": {
+						"team": 48
+					},
+					"14": {
+						"team": 82
+					}
+				}
+			}
+		},
+		"pro_teams": {
+			"1": {
+				"tag": "NiP",
+				"geo": "SE"
+			},
+			"2": {
+				"tag": "AD",
+				"geo": "KZ"
+			}
+		},
+		"items_game_live": {
+			"pro_players": {
+				"*": {
+					"events": {
+						"16": {
+							"clutch_kills": 0,
+							"pistol_kills": 0,
+							"opening_kills": 0,
+							"sniper_kills": 0,
+							"KDR": 1,
+							"enemy_kills": 0,
+							"deaths": 0,
+							"matches_played": 0,
+							"*": {
+								"clutch_kills": 0,
+								"pistol_kills": 0,
+								"opening_kills": 0,
+								"sniper_kills": 0,
+								"KDR": 1,
+								"enemy_kills": 0,
+								"deaths": 0,
+								"matches_played": 0
+							}
+						}
+					}
+				}
+			}
+		},
+		"keychain_definitions": {
+			"1": {
+				"name": "kc_missinglink_ava",
+				"loc_name": "#keychain_kc_missinglink_ava",
+				"loc_description": "#keychain_kc_missinglink_ava_desc",
+				"item_rarity": "rare",
+				"image_inventory": "econ/keychains/missinglink/kc_missinglink_ava",
+				"pedestal_display_model": "weapons/keychains/missinglink/vmdl/kc_missinglink_ava.vmdl"
+			},
+			"2": {
+				"name": "kc_missinglink_banana",
+				"loc_name": "#keychain_kc_missinglink_banana",
+				"loc_description": "#keychain_kc_missinglink_banana_desc",
+				"item_rarity": "mythical",
+				"image_inventory": "econ/keychains/missinglink/kc_missinglink_banana",
+				"pedestal_display_model": "weapons/keychains/missinglink/vmdl/kc_missinglink_banana.vmdl"
+			}
+		},
+		"highlight_reels": {
+			"1": {
+				"id": "aus2025_chopper2kvsmouzonmirage1",
+				"tournament event id": 24,
+				"tournament event stage id": 5,
+				"map": "de_mirage",
+				"tournament event team0 id": 81,
+				"tournament event team1 id": 106
+			},
+			"2": {
+				"id": "aus2025_chopperdiesfrom100byutilityvsmouzonmirage",
+				"tournament event id": 24,
+				"tournament event stage id": 5,
+				"map": "de_mirage",
+				"tournament event team0 id": 81,
+				"tournament event team1 id": 106
+			}
+		}
+	}
+}
