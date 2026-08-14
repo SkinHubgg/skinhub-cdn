@@ -214,5 +214,12 @@ describe('url helpers', () => {
 	})
 })
 
-/* The seam between this module and the data layer is asserted in `bundle.test.ts`, which checks
- * the real module graph rather than the source text. */
+/* Three things this file deliberately does NOT test, because they belong elsewhere:
+ *
+ *   - the **byte format**. `codec.test.ts` runs 2,326 items and 41 URL forms through `src/codec.ts`
+ *     and through `cs2-inspect-lib` and asserts the hex is identical; `codec-mutation.test.ts` proves
+ *     that comparison can fail. The cases here are the readable examples, not the coverage.
+ *   - the **module graph** — that a data-only consumer carries none of the codec, and that the codec
+ *     builds for a browser. `bundle.test.ts` measures real bundles rather than source text.
+ *   - the **row format**, which is `placement.test.ts`.
+ */

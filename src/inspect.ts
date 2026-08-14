@@ -1,23 +1,23 @@
 /**
- * The CS2 inspect-link codec — `@skinhub/cdn/inspect`.
+ * The CS2 inspect-link surface — `@skinhub/cdn/inspect`.
  *
  * **This is encode/decode, not data-fetching.** It shares a package with the CDN layer so that a
- * site needs one dependency rather than ours *and* `cs2-inspect-lib`, but it shares nothing else:
- * it is its own entry point, imports nothing from `config`/`fetch`/`cache`, and could move to its
- * own package without a breaking change to anything that imports `@skinhub/cdn`.
+ * site needs one dependency rather than two, but it shares nothing else: it imports nothing from
+ * `config`/`fetch`/`cache`, and could move to its own package without a breaking change to anything
+ * that imports `@skinhub/cdn`.
  *
- * The seam runs the other way too. `cs2-inspect-lib` is a Node-shaped library — its dependency
- * list includes `steam-user` and `node-cs2`, for a Game Coordinator round trip this module never
- * makes. Those are behind a dynamic `import()` inside a method, so they are not pulled in eagerly,
- * but a browser bundle that only wants `fetchSkins` should never even resolve them. Keeping this
- * out of the root export is what guarantees that.
+ * The bytes live in `./codec.ts`, which has **no imports at all** — no network, no Steam, no Node
+ * built-ins. This module used to wrap `cs2-inspect-lib`, which did the same maths but arrived
+ * attached to `steam-user` + `node-cs2` for a Game Coordinator round trip it never made: 89 MB and 60
+ * packages in a consumer's install, a 29 MB Node bundle, and no browser build at all.
+ * `cs2-inspect-lib` is now a devDependency and nothing more — the reference the corpus test in
+ * `test/codec.test.ts` compares against, so the byte format stays checkable.
  *
- * This is a **thin wrapper, not a fork**: `cs2-inspect-lib` stays the implementation. What is ours
- * is the boundary — every value goes through `makeSkinPlacement` before it reaches the encoder, so
- * a caller cannot hand the wire a signed, fractional or exponent-formatted id. That guard exists
- * because the CS2 WeaponPaints plugin parses ids with `uint.TryParse` and **silently skips** an
- * item whose id is not a plain unsigned integer: the sticker simply does not appear in game.
- * Owning the boundary is where that check belongs.
+ * What is ours, and always was, is the **boundary**: every value goes through `makeSkinPlacement`
+ * before it reaches the encoder, so a caller cannot hand the wire a signed, fractional or
+ * exponent-formatted id. That guard exists because the CS2 WeaponPaints plugin parses ids with
+ * `uint.TryParse` and **silently skips** an item whose id is not a plain unsigned integer: the
+ * sticker simply does not appear in game. Owning the boundary is where that check belongs.
  *
  * Normalising the whole item, rather than only its stickers, is also what makes encode → decode an
  * identity for input a human wrote. `paintwear` is a protobuf `float`; hand the encoder the double
@@ -25,7 +25,7 @@
  * built and the value you decoded compare equal.
  */
 
-import { CS2Inspect, type EconItem, type Sticker as InspectSticker } from 'cs2-inspect-lib'
+import { createInspectUrl, decodeMaskedUrl, type EconItem, type Sticker as InspectSticker } from './codec.js'
 import {
 	emptyKeychain,
 	emptySticker,
@@ -72,14 +72,8 @@ export {
 	UINT32_MAX,
 } from './placement.js'
 
-/** The upstream item type, re-exported so a consumer needs no second dependency for the types. */
-export type { EconItem } from 'cs2-inspect-lib'
-
-/**
- * One encoder for the module. It is stateless for `createInspectUrl` / `decodeMaskedUrl`; the
- * Steam client it can also hold is never constructed on these paths.
- */
-const cs2inspect = new CS2Inspect()
+/** The wire-level item type, re-exported so a consumer needs no second dependency for the types. */
+export type { EconItem } from './codec.js'
 
 /** Empty slots carry no data, and the game omits them entirely rather than sending `sticker_id 0`. */
 const isPlaced = (placement: { sticker_id: number }) => placement.sticker_id > 0
@@ -147,7 +141,7 @@ export const fromEconItem = (item: EconItem): SkinPlacement =>
 	})
 
 /** `steam://rungame/730/…+csgo_econ_action_preview <hex>` for the item as configured. */
-export const buildInspectUrl = (skin: SkinPlacement): string => cs2inspect.createInspectUrl(toEconItem(skin))
+export const buildInspectUrl = (skin: SkinPlacement): string => createInspectUrl(toEconItem(skin))
 
 /** The console form, so it can be pasted straight into CS2. */
 export const toGameCommand = (inspectUrl: string): string => {
@@ -162,7 +156,7 @@ export const toGameCommand = (inspectUrl: string): string => {
  * round trip Valve has since shut down — so there is nothing to prefill from. Use
  * `isLegacyInspectUrl` to tell the two apart before calling this.
  */
-export const readInspectUrl = (url: string): SkinPlacement => fromEconItem(cs2inspect.decodeMaskedUrl(url))
+export const readInspectUrl = (url: string): SkinPlacement => fromEconItem(decodeMaskedUrl(url))
 
 /** True for the unmasked market/inventory form, which this module cannot decode. */
 export const isLegacyInspectUrl = (url: string): boolean =>

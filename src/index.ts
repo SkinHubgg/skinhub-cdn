@@ -1,18 +1,21 @@
 /**
- * `@skinhub/cdn` — a typed data layer over the JSON the CS2 asset exporter publishes.
+ * `@skinhub/cdn` — a typed data layer over the JSON the CS2 asset exporter publishes, plus the CS2
+ * inspect-link codec.
  *
  * Nothing is bundled. The eight files are 16 MB; they are fetched at runtime, and a caller that
  * wants an offline copy supplies its own `fallback`.
  *
- * This barrel re-exports the data layer only. Two things are deliberately **not** here:
+ * **The inspect codec is in this barrel because it is now browser-safe.** It used to be excluded on
+ * purpose: it wrapped `cs2-inspect-lib`, whose dependency list dragged `steam-user` and `node-cs2`
+ * along for a Game Coordinator round trip it never made, so `import { fetchSkins } from '@skinhub/cdn'`
+ * would have failed to build for the web at all. `src/codec.ts` replaced that with ~16 KB of pure
+ * maths and no imports, and `test/bundle.test.ts` measures both halves of the claim: the inspect
+ * entry point builds for a browser, and a consumer that imports only `fetchGloves` from this barrel
+ * still carries none of the codec.
  *
- *   - `@skinhub/cdn/inspect` — the inspect-link codec. It pulls `cs2-inspect-lib`, which a browser
- *     bundle asking for `fetchSkins` should never resolve.
- *   - `@skinhub/cdn/placement` — the placement types and the WeaponPaints row format, dependency-
- *     free, for a server that stores placement but never encodes a link.
- *
- * Every dataset also has its own entry point (`@skinhub/cdn/gloves`, …) so a consumer that wants
- * one list does not have to trust a bundler to shake off the other seven.
+ * Every dataset also has its own entry point (`@skinhub/cdn/gloves`, …), as do the codec
+ * (`@skinhub/cdn/inspect`) and the dependency-free placement layer (`@skinhub/cdn/placement`), so a
+ * consumer that wants one thing does not have to trust a bundler to shake off the rest.
  */
 
 export {
@@ -73,3 +76,44 @@ export {
 	type FetchLike,
 	inFlightCount,
 } from './fetch.js'
+export {
+	buildInspectUrl,
+	type EconItem,
+	fromEconItem,
+	isLegacyInspectUrl,
+	readInspectUrl,
+	toEconItem,
+	toGameCommand,
+} from './inspect.js'
+export {
+	clamp,
+	clampStickerOffset,
+	DEFAULT_KEYCHAIN,
+	DEFAULT_STICKER,
+	DEFAULT_STICKER_SCALE,
+	emptyKeychain,
+	emptySticker,
+	f32,
+	formatKeychainRow,
+	formatStickerRow,
+	KEYCHAIN_SCHEMA,
+	type KeychainPlacement,
+	makeKeychainPlacement,
+	makeSkinPlacement,
+	makeStickerPlacement,
+	migrateLegacyKeychainRow,
+	normalizedFromOffset,
+	offsetFromNormalized,
+	parseKeychainRow,
+	parseStickerRow,
+	shortFloat,
+	type SkinPlacement,
+	STICKER_OFFSET_MAX,
+	STICKER_OFFSET_MIN,
+	STICKER_SCHEMA,
+	STICKER_SLOTS,
+	type StickerPlacement,
+	type StickerSlot,
+	u32,
+	UINT32_MAX,
+} from './placement.js'

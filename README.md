@@ -19,8 +19,8 @@ const skins = await fetchSkins()
 skins.length // 2126
 ```
 
-Works on a server and in a browser. No Node built-ins, no top-level `await` on import, no global
-state you did not ask for.
+Works on a server and in a browser — **the inspect codec included**. No runtime dependencies, no Node
+built-ins, no top-level `await` on import, no global state you did not ask for.
 
 ---
 
@@ -242,35 +242,58 @@ a 27 KB HTML page**, not JSON. Code that goes straight to `response.json()` repo
 
 | import | contents |
 |---|---|
-| `@skinhub/cdn` | config, cache, errors, fetch, and all eight dataset helpers |
+| `@skinhub/cdn` | everything: config, cache, errors, fetch, all eight dataset helpers, the inspect codec and the placement layer |
 | `@skinhub/cdn/skins` | `fetchSkins` + the skin types |
 | `@skinhub/cdn/stickers` `…/gloves` `…/agents` `…/music` `…/keychains` `…/collectibles` `…/items-game` | one dataset each |
-| `@skinhub/cdn/placement` | placement types, normalisation, the WeaponPaints row format — **no dependencies** |
-| `@skinhub/cdn/inspect` | inspect-link encode/decode — **server-only**, see below |
+| `@skinhub/cdn/placement` | placement types, normalisation, the WeaponPaints row format |
+| `@skinhub/cdn/inspect` | inspect-link encode/decode — works in a browser |
+
+**This package has no runtime dependencies.** Nothing to audit, nothing to resolve, and nothing that
+needs a Node built-in.
 
 Measured with a real bundler against `dist`:
 
 | a consumer that imports | target | result |
 |---|---|---|
-| `fetchGloves` from `@skinhub/cdn/gloves` | browser | ~4.5 KB, and no trace of the other seven datasets |
-| everything from `@skinhub/cdn` | browser | ~7.8 KB |
-| `buildInspectUrl` from `@skinhub/cdn/inspect` | node | **~29 MB** |
-| `buildInspectUrl` from `@skinhub/cdn/inspect` | browser | **does not build** |
+| `fetchGloves` from `@skinhub/cdn/gloves` | browser | 4.5 KB, and no trace of the other seven datasets |
+| `fetchGloves` from `@skinhub/cdn` | browser | 4.5 KB — a named import off the barrel costs the same |
+| `formatStickerRow` from `@skinhub/cdn/placement` | browser | 2.0 KB |
+| `buildInspectUrl` from `@skinhub/cdn/inspect` | browser | 16.7 KB |
+| `buildInspectUrl` from `@skinhub/cdn/inspect` | node | 16.7 KB |
+| `import * as cdn` from `@skinhub/cdn` | browser | 40.4 KB — everything, because a namespace import keeps everything |
 
-### `@skinhub/cdn/inspect` is server-only
+### The inspect codec used to be server-only. It is not any more.
 
-The inspect codec wraps [`cs2-inspect-lib`](https://www.npmjs.com/package/cs2-inspect-lib), whose
+Earlier versions wrapped [`cs2-inspect-lib`](https://www.npmjs.com/package/cs2-inspect-lib), whose
 dependency list includes `steam-user` and `node-cs2` for a Game Coordinator round trip this package
-never makes. It reaches them through an `await import()` inside a method, which bundlers still
-follow — so bundling it for the browser fails on `tls`, `dns` and `readline`, and bundling it for
-Node produces about 29 MB.
+never makes. Installing this package used to put **89 MB across 60 packages** in your `node_modules`;
+it now puts **512 KB across one**. And because `cs2-inspect-lib` reached its Steam transports through
+an `await import()` inside a method, which bundlers still follow, bundling the codec for a browser
+**failed** on `tls`, `dns` and `readline`, while bundling it for Node produced about **29 MB** — an
+entire Steam client, for a protobuf encode that never talks to Steam. That is why the codec was kept
+out of the root export.
 
-That is exactly why it is a separate entry point. `import { fetchSkins } from '@skinhub/cdn'`
-touches none of it, and the data layer builds for the web cleanly. If you need to build inspect URLs
-in a browser today, do it on your server and send the string down.
+The two functions actually needed from it, `createInspectUrl` and `decodeMaskedUrl`, are pure maths —
+a protobuf message and a CRC, no network and no Steam anywhere in them. They are now written natively
+in one module with **no imports at all**, `cs2-inspect-lib` is gone from the dependency list, and the
+same consumer that would not build now bundles to 16.7 KB for a browser. So the codec is in the root
+export too; `@skinhub/cdn/inspect` stays as a subpath for anyone who wants the guarantee without
+relying on a bundler.
 
-`@skinhub/cdn/placement` is the dependency-free half — placement types, normalisation and the
-WeaponPaints row format, no protobuf — and bundles anywhere.
+Because a wrong byte in an inspect link does not throw — it produces a link that resolves to the
+wrong skin, which reads as a data problem rather than a codec problem — the port is held to a corpus
+rather than to an example. `cs2-inspect-lib` is kept as a **devDependency**, and **2,326 items plus 41
+URL forms are encoded and decoded by both implementations on every test run** and asserted identical
+byte for byte, including the ones both must refuse. The corpus is built from the real export: every
+`[defindex, paintindex]` pair in `skins.json`, real sticker and charm ids, and deliberate edges —
+float32 extremes, every varint width boundary, seed 0 and 4294967295, all five sticker slots, StatTrak
+on and off, nametags in Hebrew, CJK and emoji, and the 20 vanilla rows where `paint_index` is `null`.
+A second test perturbs one token of the codec at a time and requires the corpus to catch every
+perturbation, so the comparison cannot pass by accident.
+
+`@skinhub/cdn/placement` is still the smallest useful piece — placement types, normalisation and the
+WeaponPaints row format, no protobuf, 2 KB — for a server that stores placement but never encodes a
+link.
 
 ---
 
@@ -331,6 +354,7 @@ Encode and decode CS2 inspect links, and read/write the placement format the
 [CS2 WeaponPaints plugin](https://github.com/Nereziel/cs2-WeaponPaints) stores.
 
 ```ts
+// or from '@skinhub/cdn' — same functions, and a named import tree-shakes to the same bytes
 import { buildInspectUrl, readInspectUrl, toGameCommand, isLegacyInspectUrl } from '@skinhub/cdn/inspect'
 
 const url = buildInspectUrl({
@@ -450,6 +474,8 @@ File-name constants, if you are keying a cache or a preload by them: `SKINS_FILE
 `buildInspectUrl` · `readInspectUrl` · `toEconItem` · `fromEconItem` · `toGameCommand` ·
 `isLegacyInspectUrl` · `EconItem` — plus everything from `/placement`, re-exported.
 
+Everything in this section and the one above it is also on the root `@skinhub/cdn` export.
+
 ---
 
 ## Development
@@ -476,6 +502,15 @@ appears in it — the vanilla skins, the numeric glove `paint`, the `"null"` age
 image, every nullable field null at least once. `test/types.test.ts` asserts both that the fixtures
 validate and that those edge cases are actually present, so the validator cannot pass by being fed
 easy rows.
+
+`test/fixtures/inspect-corpus.json` is the other kind of fixture: the real ids the inspect corpus is
+generated from — every `[defindex, paintindex]` pair in `skins.json`, a sample of sticker ids across
+the whole range, and every charm id. `test/corpus.ts` crosses those with a seeded PRNG and a list of
+named edge cases; `test/codec.test.ts` runs the result through `src/codec.ts` and through
+`cs2-inspect-lib` and asserts the hex matches byte for byte; `test/codec-mutation.test.ts` perturbs
+one token of the codec at a time and requires the corpus to catch every perturbation, plus two
+controls it must not flag. That is what makes `cs2-inspect-lib` worth keeping as a devDependency:
+remove it and the equivalence stops being checkable.
 
 ### Releasing
 
