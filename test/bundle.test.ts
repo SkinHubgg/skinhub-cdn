@@ -34,6 +34,21 @@
  * | `buildInspectUrl` from `/inspect` | node | **~29 MB** | 16.7 KB |
  * | `buildInspectUrl` from `/inspect` | **browser** | **did not build** | **16.7 KB** |
  *
+ * ## And what the query layer measured when it landed (2026-08-15, browser target)
+ *
+ * | consumer imports | bytes |
+ * |---|---|
+ * | `listKnifeTypes` from `/query` | 1,724 |
+ * | `listKnifeTypes` from the barrel | 1,724 — the barrel re-export costs nothing |
+ * | `marketHashName` from `/query` | 2,511 |
+ * | `resolveItem` from `/query` | 5,592 |
+ * | `* as query` from `/query` | 19,801 — and still no fetch, config or cache in it |
+ * | `loadSkinIndex` from `/catalog` | 15,153 — this one *does* fetch, by design |
+ * | `* as cdn` from the barrel | 61,211 (was 40,431 before the query layer) |
+ *
+ * The first two lines are the point: a picker that only wants the knife list pays under 2 KB, and
+ * pays it whether it imports from the subpath or from the barrel.
+ *
  * That 29 MB was `steam-user` + `node-cs2` + `steam-appticket` + `websocket13` + `socks-proxy-agent`
  * — an entire Steam client, reached for a protobuf encode that never talked to Steam, through an
  * `await import()` inside a method that a bundler still follows. It is why the inspect layer was kept
@@ -72,6 +87,11 @@ const CASES: Case[] = [
 	{ name: 'barrel-one-dataset', module: 'index.js', importLine: uses('fetchGloves'), target: 'browser' },
 	{ name: 'barrel-inspect', module: 'index.js', importLine: uses('buildInspectUrl'), target: 'browser' },
 	{ name: 'placement', module: 'placement.js', importLine: uses('formatStickerRow'), target: 'browser' },
+	{ name: 'query', module: 'query/index.js', importLine: uses('listKnifeTypes'), target: 'browser' },
+	{ name: 'query-all', module: 'query/index.js', importLine: usesAll, target: 'browser' },
+	{ name: 'query-resolve', module: 'query/index.js', importLine: uses('resolveItem'), target: 'browser' },
+	{ name: 'barrel-query', module: 'index.js', importLine: uses('listKnifeTypes'), target: 'browser' },
+	{ name: 'catalog', module: 'catalog.js', importLine: uses('loadSkinIndex'), target: 'browser' },
 	{ name: 'config', module: 'config.js', importLine: uses('resolveCdnOrigin'), target: 'browser' },
 	{ name: 'codec', module: 'codec.js', importLine: uses('createInspectUrl'), target: 'browser' },
 	{ name: 'inspect-node', module: 'inspect.js', importLine: uses('buildInspectUrl'), target: 'node' },
@@ -198,6 +218,58 @@ describe('the barrel still shakes', () => {
 	})
 })
 
+describe('the query layer carries no network code', () => {
+	// The claim `@skinhub/cdn/query` makes about itself. A grep of the source would pass on a comment
+	// and miss a re-export chain; this bundles a consumer of the built artefact and looks at what
+	// survived. Every marker below is a string that only exists in the fetch/config/cache layer.
+	const NETWORK_MARKERS = ['cdn.skinhub.gg', 'SKINHUB_CDN_URL', 'no-cache', 'stale-while-revalidate']
+
+	test('a named import from /query pulls in no origin, no fetch options and no cache', () => {
+		for (const probe of ['query', 'query-resolve']) {
+			const code = codeOf(probe)
+			for (const marker of NETWORK_MARKERS) {
+				expect({ probe, marker, present: code.includes(marker) }).toEqual({ probe, marker, present: false })
+			}
+			expect(code).not.toContain('createMemoryCache')
+		}
+	})
+
+	test('even a namespace import of the whole query surface stays network-free', () => {
+		// The strong form: not "the bits you used shook out" but "there is nothing there to shake".
+		const code = codeOf('query-all')
+		for (const marker of NETWORK_MARKERS) {
+			expect({ marker, present: code.includes(marker) }).toEqual({ marker, present: false })
+		}
+	})
+
+	test('/query carries no codec either — it joins decoded values, it does not decode them', () => {
+		expect(codeOf('query-all')).not.toContain('csgo_econ_action_preview')
+	})
+
+	test('reaching a query function through the barrel is the same as through the subpath', () => {
+		// What makes the barrel re-export safe: a named import of `listKnifeTypes` from '@skinhub/cdn'
+		// must not drag the fetch layer in behind it.
+		const code = codeOf('barrel-query')
+		for (const marker of NETWORK_MARKERS) {
+			expect({ marker, present: code.includes(marker) }).toEqual({ marker, present: false })
+		}
+		expect(code).not.toContain('csgo_econ_action_preview')
+		expect(Math.abs(code.length - codeOf('query').length)).toBeLessThan(500)
+	})
+
+	test('the catalog entry point DOES fetch — else the tests above prove nothing', () => {
+		const code = codeOf('catalog')
+		expect(code).toContain('cdn.skinhub.gg')
+		expect(code).toContain('skins.json')
+	})
+
+	test('a consumer of one dataset carries none of the query layer', () => {
+		const code = codeOf('barrel-one-dataset')
+		expect(code).not.toContain('sfui_invpanel_filter_melee')
+		expect(code).not.toContain('StatTrak')
+	})
+})
+
 describe('per-dataset tree-shaking', () => {
 	test('the gloves consumer carries no other dataset', () => {
 		const code = codeOf('gloves')
@@ -262,6 +334,8 @@ describe('the published artefact', () => {
 			'placement',
 			'inspect',
 			'codec',
+			'catalog',
+			'query/index',
 			...Object.keys(DATASETS).map(name => `datasets/${name}`),
 		]) {
 			expect(existsSync(join(DIST, `${file}.js`))).toBe(true)

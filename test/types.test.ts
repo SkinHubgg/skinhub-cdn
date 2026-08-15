@@ -68,7 +68,7 @@ describe('committed fixtures validate against the exported types', () => {
 })
 
 describe('the fixtures actually contain the edge cases the types describe', () => {
-	test('skins: vanilla rows are null in four fields and missing three keys', async () => {
+	test('skins: vanilla rows are null in three fields and missing three keys', async () => {
 		const skins = await readJson<Skins>(FIXTURES, 'skins.json')
 		const vanilla = skins.filter(s => s.pattern === null)
 		expect(vanilla.length).toBeGreaterThan(0)
@@ -76,12 +76,33 @@ describe('the fixtures actually contain the edge cases the types describe', () =
 		for (const row of vanilla) {
 			expect(row.min_float).toBeNull()
 			expect(row.max_float).toBeNull()
-			expect(row.paint_index).toBeNull()
 			// Absent keys, not null ones — the distinction the type makes.
 			expect('souvenir' in row).toBe(false)
 			expect('wears' in row).toBe(false)
 			expect('collections' in row).toBe(false)
 		}
+	})
+
+	// This assertion used to be part of the test above, as `paint_index === null` on every
+	// pattern-null row, and the export grew out from under it: the exporter now emits a vanilla row
+	// for every GUN too, and those spell "no finish" as the string '0' rather than as null. Measured
+	// on the current export, 55 rows have a null `pattern` and only 20 of them — the knives — have a
+	// null `paint_index`.
+	test('skins: the two flavours of vanilla are spelled differently', async () => {
+		const skins = await readJson<Skins>(FIXTURES, 'skins.json')
+		const vanilla = skins.filter(s => s.pattern === null)
+
+		const knives = vanilla.filter(s => s.paint_index === null)
+		const guns = vanilla.filter(s => s.paint_index === '0')
+
+		expect(knives.length).toBeGreaterThan(0)
+		expect(guns.length).toBeGreaterThan(0)
+		expect(knives.length + guns.length).toBe(vanilla.length)
+
+		// A vanilla gun is a loadout state, not an item — which is what makes it untradable.
+		for (const row of guns) expect(row.rarity.id).toBe('rarity_default_weapon')
+		// A vanilla knife is a real item and sells as `★ Bayonet`.
+		for (const row of knives) expect(row.rarity.id).not.toBe('rarity_default_weapon')
 	})
 
 	test('skins: phase is absent, never null, on rows that have none', async () => {

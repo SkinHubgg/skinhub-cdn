@@ -14,9 +14,14 @@ bun add @skinhub/cdn
 
 ```ts
 import { fetchSkins } from '@skinhub/cdn'
+import { listKnifeTypes, skinsForWeapon, findSkin } from '@skinhub/cdn/query'
 
 const skins = await fetchSkins()
-skins.length // 2126
+skins.length                                       // 2161 — guns, knives and gloves, one file
+
+listKnifeTypes(skins)                              // the 20 knife types
+skinsForWeapon(skins, 'AK-47')                     // every AK-47 finish
+findSkin(skins, { defindex: 7, paintindex: 801 })  // AK-47 | Asiimov
 ```
 
 Works on a server and in a browser — **the inspect codec included**. No runtime dependencies, no Node
@@ -27,6 +32,7 @@ built-ins, no top-level `await` on import, no global state you did not ask for.
 ## Contents
 
 - [What it serves](#what-it-serves)
+- [Querying](#querying)
 - [Configuring the origin](#configuring-the-origin)
 - [Fetching](#fetching)
 - [Caching](#caching)
@@ -46,7 +52,7 @@ Eight files under `data/` on the CDN. Row counts are from the export current at 
 
 | helper | file | rows | size | shape |
 |---|---|---:|---:|---|
-| `fetchSkins` | `skins.json` | 2,126 | 4.2 MB | `Skin[]` |
+| `fetchSkins` | `skins.json` | 2,161 | 4.2 MB | `Skin[]` |
 | `fetchStickers` | `stickers.json` | 11,788 | 5.5 MB | `Sticker[]` |
 | `fetchCollectibles` | `collectibles.json` | 715 | 212 KB | `Collectible[]` |
 | `fetchKeychains` | `keychains.json` | 143 | 40 KB | `Keychain[]` |
@@ -64,6 +70,202 @@ import { fetchCdnJson, fetchCdnData } from '@skinhub/cdn'
 await fetchCdnJson<Manifest>('manifest.json')  // <origin>/manifest.json
 await fetchCdnData<Row[]>('something-new.json') // <origin>/data/something-new.json
 ```
+
+---
+
+## Querying
+
+`skins.json` **is the whole weapon catalogue**. Counted on the current export: 1,483 gun rows, 576
+melee, 94 glove and 8 Zeus. Knives and gloves are already in it, so answering "what exists" is one
+4.2 MB fetch, not three.
+
+`@skinhub/cdn/query` is what you ask it with. **Every function takes the rows as its first
+argument and none of them fetch.** That is deliberate: `skinsForWeapon(skins, 'AK-47')` is honest
+about the fact that the download already happened, where a `fetchSkinsForWeapon('AK-47')` would hide
+4.2 MB behind something spelled like a filter and invite you to call it once per row of a picker.
+The subpath imports nothing from the fetch, cache or config layers — a browser build of
+`listKnifeTypes` is 1.7 KB with no origin string in it, and `test/bundle.test.ts` checks the built
+bundle rather than the source.
+
+### Enumerate
+
+```ts
+import { fetchSkins } from '@skinhub/cdn'
+import { listCategories, listWeaponTypes, listKnifeTypes, listGloveTypes } from '@skinhub/cdn/query'
+
+const skins = await fetchSkins()
+
+listCategories(skins)
+// [{ key: 'rifles', name: 'Rifles', skinCount: 500, weaponCount: 11 }, … 7 in all]
+
+listWeaponTypes(skins)            // 63 — every weapon, ascending by defindex
+listWeaponTypes(skins, 'pistols') // 10
+listKnifeTypes(skins)             // 20
+listGloveTypes(skins)             // 8
+// { defindex: 500, id: 'weapon_bayonet', name: 'Bayonet', category: 'knives', skinCount: 35, hasVanilla: true }
+```
+
+`SkinCategoryKey` is a closed union — `'rifles' | 'pistols' | 'smgs' | 'heavy' | 'knives' | 'gloves'
+| 'equipment'` — so a `switch` over it is exhaustively checked. It is the only closed union in the
+package; the ones describing Valve's own tokens stay open.
+
+**A weapon type is keyed on `weapon.weapon_id`, never on `weapon.id`.** There are 83 distinct
+`weapon.id` values against 63 defindexes, because each vanilla knife row carries a `sfui_wpnhud_*`
+alias instead of the item name. Group a picker by `weapon.id` and every knife splits in two.
+
+That alias survives a lookup, because the lookups hand back the exporter's row untouched. So when
+you need the weapon's identity — a model path, a route, a group key — read it through `weaponOf`
+rather than off the row:
+
+```ts
+import { findSkin, weaponOf } from '@skinhub/cdn/query'
+
+const bayonet = findSkin(skins, { defindex: 500, paintindex: 0 })
+bayonet?.weapon.id                  // 'sfui_wpnhud_knifebayonet' — a HUD string. No model has this name.
+weaponOf(skins, bayonet!).id        // 'weapon_bayonet' ✔
+resolveItem(placement, { skins }).weapon?.id  // same, straight off a decoded inspect link
+```
+
+It bites on the 20 vanilla knives and nowhere else. `weaponOf` also reports `aliased: true` in the
+one case it cannot resolve — a list you have already filtered down to just the vanilla row — so
+"resolved" and "nothing to resolve with" stay distinguishable.
+
+### Query within one
+
+```ts
+import { skinsForWeapon, skinsInCategory, knifeSkins, gloveSkins, statTrakSkins } from '@skinhub/cdn/query'
+
+skinsForWeapon(skins, 7)               // by defindex — the key
+skinsForWeapon(skins, 'weapon_ak47')   // by item id
+skinsForWeapon(skins, 'AK-47')         // by display name, case-insensitively
+skinsForWeapon(skins, decodedLink)     // by anything with a `defindex`
+
+skinsInCategory(skins, 'knives')       // 576
+knifeSkins(skins)                      // the same 576
+gloveSkins(skins)                      // 94 — "all gloves", no second fetch
+statTrakSkins(skins)                   // 1274
+
+listCollections(skins)                 // 94, with counts
+listCrates(skins)                      // 196
+skinsInCrate(skins, 'crate-4089')
+```
+
+### Look up one thing
+
+Return types say what was measured. Single where the key is unique, an array where it is not.
+
+| you hold | call | returns | why |
+|---|---|---|---|
+| defindex + paint index | `findSkin(skins, ref)` | `Skin \| undefined` | the pair is unique across all 2,161 rows |
+| the export's row id | `findSkinById(skins, id)` | `Skin \| undefined` | 2,161 distinct ids |
+| a paint index alone | `skinsByPaintIndex(skins, i)` | `Skin[]` | 113 of 1,480 are worn by more than one weapon |
+| a display name | `skinsByName(skins, name)` | `Skin[]` | 29 names cover 181 rows — the Doppler phases |
+| a Steam `market_hash_name` | `skinsByMarketHashName(skins, n)` | `Skin[]` | same 29, for the same reason |
+
+```ts
+findSkin(skins, { defindex: 7, paintindex: 801 })   // AK-47 | Asiimov
+findSkin(skins, readInspectUrl(link))               // a decoded link satisfies the shape as-is
+```
+
+**A defindex is not an item id and a paint index is not either.** Only the pair is. That matters
+because it is the one identity every source agrees on — an inspect link, a Steam inventory row and a
+WeaponPaints database row all carry both numbers.
+
+### Sorting by grade
+
+`Skin['rarity']` is `{ id, name, color }` with no ordinal and the other six lists carry a bare word,
+so neither sorts on its own. `rarityRank` puts both on Valve's own ladder — the `value` field of
+`items_game.rarities`, 0 (`default`) through 7 (`immortal`, which the UI calls Contraband).
+
+```ts
+import { compareByRarity, rarityRank } from '@skinhub/cdn/query'
+
+skins.sort(compareByRarity)                  // commonest first
+skins.sort((a, b) => compareByRarity(b, a))  // rarest first
+stickers.sort(compareByRarity)               // same call, different list
+
+rarityRank(skin)         // reads skin.rarity for you
+rarityRank(skin.rarity)  // identical
+rarityRank(musicKit)     // undefined — music.json has rarity: null on all 101 rows
+```
+
+Both take the row *or* the rarity. `undefined` rather than `-1` for an unranked value, so "no
+rarity" stays distinguishable from "the lowest rarity".
+
+### `market_hash_name`, the Steam join key
+
+Steam publishes no defindex on a listing and `skins.json` has no `market_hash_name` column, so the
+join has to be built — exactly, because a name assembled in the wrong order returns no listings,
+which looks precisely like an item nobody is selling.
+
+```ts
+import { marketHashName, marketHashNames, parseMarketHashName } from '@skinhub/cdn/query'
+
+marketHashName(asiimov, { wear: 'Field-Tested' })            // 'AK-47 | Asiimov (Field-Tested)'
+marketHashName(asiimov, { wear: 'FT', stattrak: true })      // 'StatTrak™ AK-47 | Asiimov (Field-Tested)'
+marketHashName(karambit, { wear: 'FN', stattrak: true })     // '★ StatTrak™ Karambit | Doppler (Factory New)'
+marketHashName(vanillaBayonet)                               // '★ Bayonet'
+marketHashName(defaultDeagle, { wear: 'FT' })                // null — a vanilla gun has no listing
+
+marketHashNames(asiimov)  // all 10 keys this row sells under, with their wear/quality flags
+```
+
+The star comes **before** StatTrak™, and it is already in `skin.name` — all 670 melee and glove rows
+start with `★ `. `null` comes back for any variant that does not exist rather than a string that
+would find nothing: a StatTrak glove, a Souvenir AK, an exterior below the finish's `min_float`.
+
+> **`skin.souvenir` does not mean a Souvenir version exists.** It is `true` on 1,456 rows including
+> `AK-47 | Asiimov` and `M4A4 | Howl`, and it contradicts `stattrak` on 698 of them — no CS2 item is
+> both. `canBeSouvenir` uses the drop source instead: 319 rows drop from a `… Souvenir Package`, and
+> exactly 0 of those are StatTrak-able. Enumerating from the raw flag would emit roughly 1,100 keys
+> that match nothing on Steam.
+
+### Inspect link in, renderable item out
+
+```ts
+import { readInspectUrl } from '@skinhub/cdn/inspect'
+import { fetchSkins, fetchStickers } from '@skinhub/cdn'
+import { resolveItem, hasStickers } from '@skinhub/cdn/query'
+
+const placement = readInspectUrl(link)
+
+const skins = await fetchSkins()
+const stickers = hasStickers(placement) ? await fetchStickers() : undefined
+
+const item = resolveItem(placement, { skins, stickers })
+
+item.name             // 'AK-47 | Asiimov'
+item.category         // 'rifles'
+item.float            // clamped into the finish's own [min_float, max_float]
+item.rawFloat         // what the wire actually said, so the clamp is visible
+item.wear.name        // 'Field-Tested'
+item.marketHashName   // 'StatTrak™ AK-47 | Asiimov (Field-Tested)'
+item.stickers[0]?.sticker?.image
+item.keychain?.keychain?.name
+```
+
+Every catalogue is optional. `resolveItem(placement, {})` still gives you the wire values and the
+wear tier. `hasStickers`/`hasKeychain` let you decide whether the 5.5 MB `stickers.json` is worth
+fetching *before* you fetch it.
+
+### If you are resolving more than a handful
+
+```ts
+import { loadSkinIndex } from '@skinhub/cdn/catalog'
+
+const index = await loadSkinIndex()        // fetch + build, memoised on the fetched array
+
+index.weaponTypes('knives')
+index.forWeapon(7)
+index.find({ defindex: 7, paintindex: 801 })
+index.findByMarketHashName('AK-47 | Asiimov (Field-Tested)')
+index.resolve(readInspectUrl(link))
+```
+
+`createSkinIndex(skins)` is the same thing without the fetch. **No index is ever shipped in the
+tarball** — one would be stale the moment the exporter runs, and the failure would be silent: a new
+finish live on the CDN, missing from your picker, with nothing to show for it. The index is built
+from the rows you fetched and lives exactly as long as they do.
 
 ---
 
@@ -242,9 +444,11 @@ a 27 KB HTML page**, not JSON. Code that goes straight to `response.json()` repo
 
 | import | contents |
 |---|---|
-| `@skinhub/cdn` | everything: config, cache, errors, fetch, all eight dataset helpers, the inspect codec and the placement layer |
+| `@skinhub/cdn` | everything: config, cache, errors, fetch, all eight dataset helpers, the query layer, the inspect codec and the placement layer |
 | `@skinhub/cdn/skins` | `fetchSkins` + the skin types |
 | `@skinhub/cdn/stickers` `…/gloves` `…/agents` `…/music` `…/keychains` `…/collectibles` `…/items-game` | one dataset each |
+| `@skinhub/cdn/query` | every filter, lookup and market-hash-name helper — **pure, fetches nothing** |
+| `@skinhub/cdn/catalog` | `loadSkinIndex` / `loadCatalog` — fetch and index in one call |
 | `@skinhub/cdn/placement` | placement types, normalisation, the WeaponPaints row format |
 | `@skinhub/cdn/inspect` | inspect-link encode/decode — works in a browser |
 
@@ -258,9 +462,15 @@ Measured with a real bundler against `dist`:
 | `fetchGloves` from `@skinhub/cdn/gloves` | browser | 4.5 KB, and no trace of the other seven datasets |
 | `fetchGloves` from `@skinhub/cdn` | browser | 4.5 KB — a named import off the barrel costs the same |
 | `formatStickerRow` from `@skinhub/cdn/placement` | browser | 2.0 KB |
+| `listKnifeTypes` from `@skinhub/cdn/query` | browser | 1.7 KB, with no origin, fetch or cache in it |
+| `listKnifeTypes` from `@skinhub/cdn` | browser | 1.7 KB — again the same through the barrel |
+| `marketHashName` from `@skinhub/cdn/query` | browser | 2.5 KB |
+| `resolveItem` from `@skinhub/cdn/query` | browser | 5.5 KB |
+| `import * as query` from `@skinhub/cdn/query` | browser | 19.3 KB — the whole surface, still network-free |
+| `loadSkinIndex` from `@skinhub/cdn/catalog` | browser | 14.8 KB — this one does fetch, by design |
 | `buildInspectUrl` from `@skinhub/cdn/inspect` | browser | 16.7 KB |
 | `buildInspectUrl` from `@skinhub/cdn/inspect` | node | 16.7 KB |
-| `import * as cdn` from `@skinhub/cdn` | browser | 40.4 KB — everything, because a namespace import keeps everything |
+| `import * as cdn` from `@skinhub/cdn` | browser | 59.8 KB — everything, because a namespace import keeps everything |
 
 ### The inspect codec used to be server-only. It is not any more.
 
@@ -303,22 +513,33 @@ Derived from the real exported files and checked against them by the test suite,
 every row and **fails on a field the types do not describe**. Some consequences you should know
 about, because each one is a bug waiting in code written against a looser type:
 
-**`skins.json` has 20 "vanilla" rows** — the knives with no finish, `skin-vanilla-weapon_bayonet`
-and friends. On those rows:
+**`skins.json` has 55 "vanilla" rows, in two different spellings.** On all 55, `pattern`,
+`min_float` and `max_float` are **`null`**, and `souvenir`, `wears` and `collections` are **absent
+keys**, not `null`. The difference is what "no finish" looks like:
 
-- `pattern`, `min_float`, `max_float` and `paint_index` are **`null`**
-- `souvenir`, `wears` and `collections` are **absent keys**, not `null`
+- the **20 vanilla knives** (`skin-vanilla-weapon_bayonet` and friends) have `paint_index: null`;
+- the **35 vanilla guns** (`skin-vanilla-weapon_deagle`, …) have `paint_index: '0'` and
+  `rarity.id === 'rarity_default_weapon'`.
+
+That second group is why `skin.wears.length` is the most likely crash in code written against the
+raw type — it throws on 55 of 2,161 rows.
 
 ```ts
+import { isVanilla, wearsOf, paintIndexOf } from '@skinhub/cdn/query'
+
 const skins = await fetchSkins()
 for (const skin of skins) {
-  skin.pattern?.name          // null on 20 rows
-  skin.collections ?? []      // undefined on those same 20
+  wearsOf(skin)         // [] on all 55, instead of throwing on a missing key
+  paintIndexOf(skin)    // 0 for both spellings, matching what a decoded link carries
+  isVanilla(skin)       // true for both
 }
 ```
 
-**`phase` is on 181 of 2,126 rows**, and absent — never null — on the rest. It is
-`'Phase 1' | … | 'Black Pearl'` widened so a new phase is not a compile error.
+**`phase` is on 181 of 2,161 rows**, and absent — never null — on the rest. It is
+`'Phase 1' | … | 'Black Pearl'` widened so a new phase is not a compile error. Those 181 rows are
+also the only reason `name` is not unique: 29 names cover all of them.
+
+**`souvenir` is not "a Souvenir version exists".** See [Querying](#querying) — use `canBeSouvenir`.
 
 **`gloves.json` has one row where `paint` is a `number`** (the `Gloves | Default` row); the other 94
 are strings. Join it against `Skin['paint_index']` through `String()`.
@@ -462,6 +683,39 @@ File-name constants, if you are keying a cache or a preload by them: `SKINS_FILE
 `Gloves` · `Agent` · `Agents` · `AgentTeam` · `MusicKit` · `MusicKits` · `Keychain` · `Keychains` ·
 `Collectible` · `Collectibles` · `ItemsGame` · `ItemsGameSection` · `RarityToken` · `ImageUrl` ·
 `CdnFetchOptions` · `DatasetOptions` · `FetchLike`
+
+### `@skinhub/cdn/query`
+
+Taxonomy — `listCategories` · `listWeaponTypes` · `listKnifeTypes` · `listGloveTypes` ·
+`listGunTypes` · `skinCategory` · `isKnife` · `isGlove` · `isGun` · `isEquipment` · `isVanilla` ·
+`SKIN_CATEGORIES` · `SKIN_CATEGORY_IDS`
+
+Filters — `skinsForWeapon` · `skinsInCategory` · `knifeSkins` · `gloveSkins` · `gunSkins` ·
+`vanillaSkins` · `statTrakSkins` · `souvenirSkins` · `skinsWithWear` · `skinsInCollection` ·
+`skinsInCrate` · `listCollections` · `listCrates` · `phasesOf`
+
+Lookups — `findSkin` · `findSkinById` · `skinsByName` · `skinsByPaintIndex` ·
+`skinsByMarketHashName` · `paintIndexForMarketHashName` · `createSkinIndex`
+
+Fields — `weaponOf` · `paintIndexOf` · `wearsOf` · `floatRangeOf` · `clampFloat`
+
+Market — `marketHashName` · `marketHashNames` · `marketHashNameIndex` · `parseMarketHashName` ·
+`canBeStatTrak` · `canBeSouvenir` · `isUntradable` · `STATTRAK_PREFIX` · `SOUVENIR_PREFIX` ·
+`STAR_PREFIX`
+
+Wear and rarity — `WEAR_TIERS` · `wearTier` · `wearTierForFloat` · `rarityRank` ·
+`compareByRarity` · `RARITY_RANKS` · `WEAPON_RARITY_RANKS`
+
+Resolve — `resolveItem` · `resolveItemWith` · `hasStickers` · `hasKeychain`
+
+Types — `SkinCategoryKey` · `WeaponRef` · `WeaponType` · `ResolvedWeapon` · `WeaponSelector` ·
+`CategorySummary` · `NamedGroup` · `SkinRef` · `SkinIndex` · `MarketEntry` · `MarketVariant` ·
+`MarketHashNameOptions` · `ParsedMarketHashName` · `ResolvedItem` · `ResolvedSticker` ·
+`ResolvedKeychain` · `ItemCatalogs` · `ItemFinders` · `WearTier` · `WearTierId` · `WearName` ·
+`WearShort` · `WearLike` · `RarityRank` · `RarityLike` · `RarityObject` · `RarityBearer`
+
+### `@skinhub/cdn/catalog`
+`loadSkinIndex` · `loadCatalog` · `LoadSkinIndexOptions` · `Catalog`
 
 ### `@skinhub/cdn/placement`
 `makeSkinPlacement` · `makeStickerPlacement` · `makeKeychainPlacement` · `emptySticker` ·

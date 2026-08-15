@@ -16,6 +16,15 @@
  * Every dataset also has its own entry point (`@skinhub/cdn/gloves`, …), as do the codec
  * (`@skinhub/cdn/inspect`) and the dependency-free placement layer (`@skinhub/cdn/placement`), so a
  * consumer that wants one thing does not have to trust a bundler to shake off the rest.
+ *
+ * **The query layer (`@skinhub/cdn/query`) is re-exported here for the same reason the codec is.**
+ * It is pure — it imports nothing from `fetch`/`cache`/`config`, so it carries no network code — and
+ * an integrator's first instinct is to type `listKnifeTypes` and see whether the editor offers it.
+ * `test/query.test.ts` asserts the no-network property by walking the import graph, and
+ * `test/bundle.test.ts` asserts that importing only `fetchGloves` still carries none of it.
+ *
+ * The one part of the query work that *does* fetch, `loadSkinIndex`, lives in `@skinhub/cdn/catalog`
+ * and is re-exported here too — it is `fetchSkins` plus an index, so it belongs with the fetchers.
  */
 
 export {
@@ -38,6 +47,7 @@ export {
 	SKINHUB_CDN_DEFAULT_ORIGIN,
 	SKINHUB_CDN_ENV_VAR,
 } from './config.js'
+export { type Catalog, loadCatalog, loadSkinIndex, type LoadSkinIndexOptions } from './catalog.js'
 export { AGENTS_FILE, type Agent, type Agents, type AgentTeam, AGENT_TEAM_CT, AGENT_TEAM_T, fetchAgents } from './datasets/agents.js'
 export { COLLECTIBLES_FILE, type Collectible, type Collectibles, fetchCollectibles } from './datasets/collectibles.js'
 export type { ImageUrl, Open, RarityToken } from './datasets/common.js'
@@ -85,6 +95,7 @@ export {
 	toEconItem,
 	toGameCommand,
 } from './inspect.js'
+export * from './query/index.js'
 export {
 	clamp,
 	clampStickerOffset,

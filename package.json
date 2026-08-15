@@ -51,6 +51,16 @@
 			"bun": "./src/datasets/items-game.ts",
 			"import": "./dist/datasets/items-game.js"
 		},
+		"./query": {
+			"types": "./dist/query/index.d.ts",
+			"bun": "./src/query/index.ts",
+			"import": "./dist/query/index.js"
+		},
+		"./catalog": {
+			"types": "./dist/catalog.d.ts",
+			"bun": "./src/catalog.ts",
+			"import": "./dist/catalog.js"
+		},
 		"./placement": {
 			"types": "./dist/placement.d.ts",
 			"bun": "./src/placement.ts",

@@ -6,20 +6,31 @@
  *
  *   bun run test:live
  *
- * ## State of the origin when this was written (2026-08-08, measured)
+ * ## State of the origin
  *
- * `cdn.skinhub.gg` was **mid-upload**. `manifest.json` (6.95 MB) and `data/items_game.json`
- * (6.84 MB) were live and correct; the other seven `data/*.json` returned **404**. So these tests
- * are written to report what is there rather than to assume all eight are:
+ * **2026-08-08 (measured):** `cdn.skinhub.gg` was **mid-upload**. `manifest.json` (6.95 MB) and
+ * `data/items_game.json` (6.84 MB) were live and correct; the other seven `data/*.json` returned
+ * **404**. So these tests were written to report what is there rather than to assume all eight are:
  * `items_game.json` is asserted hard, and the seven are checked opportunistically — a 404 is
  * reported as a skip-with-reason, anything else that is served must validate.
  *
+ * **2026-08-15 (measured):** all eight are live and all seven lists validate — 2,161 skins, 11,788
+ * stickers, 715 collectibles, 143 charms, 101 music kits, 95 gloves, 81 agents. The opportunistic
+ * handling is kept anyway: it costs nothing and it is the shape the next upload window will need.
+ *
  * The 404 body is a Cloudflare HTML page, `content-type: text/html`, which is exactly the shape
  * `CdnError` exists to describe — so the "the file is missing" path is itself asserted.
+ *
+ * **`access-control-allow-origin` is absent from the origin's responses**, so every test here works
+ * from a server and would not from a browser. That is an origin configuration rather than anything
+ * this package does — nothing in the API is designed around it. See the note in `src/catalog.ts`.
  */
 
 import { describe, expect, test } from 'bun:test'
 import { clearDefaultCache } from '../src/cache.js'
+import { loadSkinIndex } from '../src/catalog.js'
+import type { Skin } from '../src/datasets/skins.js'
+import { marketHashName } from '../src/query/index.js'
 import { dataUrl, SKINHUB_CDN_DEFAULT_ORIGIN } from '../src/config.js'
 import { fetchAgents } from '../src/datasets/agents.js'
 import { fetchCollectibles } from '../src/datasets/collectibles.js'
@@ -106,4 +117,27 @@ describe.skipIf(!LIVE)(`live CDN (${SKINHUB_CDN_DEFAULT_ORIGIN})`, () => {
 		})
 		expect(result).toBe(fallback)
 	}, 60_000)
+
+	// The query layer against the bytes the CDN is actually serving, not against a fixture. Everything
+	// asserted here is a number quoted in a doc comment somewhere.
+	test('the query layer answers the catalogue questions against the live file', async () => {
+		clearDefaultCache()
+		const index = await loadSkinIndex()
+
+		expect(index.skins.length).toBe(2161)
+		expect(index.weaponTypes().length).toBe(63)
+		expect(index.weaponTypes('knives').length).toBe(20)
+		expect(index.weaponTypes('gloves').length).toBe(8)
+		expect(index.forWeapon(7).length).toBeGreaterThan(50)
+		expect(index.byMarketHashName.size).toBe(15_455)
+
+		const asiimov = index.find({ defindex: 7, paintindex: 801 })
+		expect(asiimov?.name).toBe('AK-47 | Asiimov')
+		expect(marketHashName(asiimov as Skin, { wear: 'Field-Tested', stattrak: true })).toBe(
+			'StatTrak™ AK-47 | Asiimov (Field-Tested)',
+		)
+
+		// The index is memoised on the fetched array, so a second call is free.
+		expect(await loadSkinIndex()).toBe(index)
+	}, 120_000)
 })

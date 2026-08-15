@@ -174,12 +174,19 @@ export const stickerShape = obj({
 	},
 })
 
-export const collectibleShape = obj({
-	required: { id: str, name: str, image: str, rarity: nullable(rarityToken), description: nullable(str) },
-})
+/** The five fields `keychains.json` and `music.json` share. `collectibles.json` adds `model`. */
+const namedRow = {
+	id: str,
+	name: str,
+	image: str,
+	rarity: nullable(rarityToken),
+	description: nullable(str),
+}
 
-export const keychainShape = collectibleShape
-export const musicKitShape = collectibleShape
+export const collectibleShape = obj({ required: { ...namedRow, model: nullable(str) } })
+
+export const keychainShape = obj({ required: namedRow })
+export const musicKitShape = keychainShape
 
 export const gloveShape = obj({
 	required: { weapon_defindex: num, paint: union(str, num), image: str, paint_name: str },
