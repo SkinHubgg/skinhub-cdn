@@ -256,6 +256,89 @@ export const weaponOf = (skins: Skins, skin: Skin): ResolvedWeapon => {
 	}
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * The weapon id as a key, in both directions.
+ *
+ * Everything above keys on the defindex, because the defindex is the key. But a large family of
+ * consumers does not hold one: the CS2 **WeaponPaints** plugin schema, which is what a community
+ * server's website reads and writes, stores `wp_player_knife.knife` as the item NAME string
+ * (`weapon_bayonet`) while `wp_player_skins.weapon_defindex` beside it is the number. Reading a
+ * loadout means going name -> defindex; writing an equipped knife means going defindex -> name.
+ * Neither direction had a home here, so every consumer wrote the same eight-line derivation over
+ * `weapon.weapon_id` and got to decide for itself whether to filter the `sfui_` aliases.
+ *
+ * There is no `WEAPON_IDS` constant, deliberately. A table baked into this package is stale the
+ * moment Valve ships a knife, which is the same argument `lookup.ts` makes about a prebuilt index.
+ * These are functions of the rows you fetched, like everything else here.
+ * ------------------------------------------------------------------------------------------ */
+
+/**
+ * Weapon item name -> item definition index. `weapon_ak47` is 7, `weapon_bayonet` is 500.
+ *
+ * One entry per weapon type, so 63 over the full export, and the `sfui_wpnhud_*` aliases are never
+ * keys - `listWeaponTypes` has already resolved each defindex to its item name. Measured: the 83
+ * distinct `weapon.id` values in the data collapse to exactly these 63, the 20 dropped are all
+ * aliases, and no two defindexes share an id.
+ *
+ * The 8 glove ids (`sporty_gloves`, `specialist_gloves`, …) are in here, because `skins.json` holds
+ * the glove rows too. A consumer does not need `gloves.json` to map a glove name to its defindex.
+ */
+export const weaponDefindexes = (skins: Skins): Record<string, number> => {
+	const map: Record<string, number> = {}
+	for (const type of listWeaponTypes(skins)) map[type.id] = type.defindex
+	return map
+}
+
+/** The reverse: item definition index -> weapon item name. 63 entries, never an alias. */
+export const weaponIdsByDefindex = (skins: Skins): Record<number, string> => {
+	const map: Record<number, string> = {}
+	for (const type of listWeaponTypes(skins)) map[type.defindex] = type.id
+	return map
+}
+
+/**
+ * The defindex for a weapon item name, or `undefined`.
+ *
+ * Accepts an alias too, so a value that reached your database before anything filtered them still
+ * resolves: `defindexForWeaponId(skins, 'sfui_wpnhud_knifebayonet')` is 500, the same as
+ * `'weapon_bayonet'`. Matching is exact and case-sensitive - these are item names out of
+ * `items_game`, not display names. For `'AK-47'` use `skinsForWeapon`, which takes either.
+ */
+export const defindexForWeaponId = (skins: Skins, id: string): number | undefined => {
+	for (const skin of skins) if (skin.weapon.id === id) return skin.weapon.weapon_id
+	return undefined
+}
+
+/** The weapon item name for a defindex, or `undefined`. Never an alias. */
+export const weaponIdForDefindex = (skins: Skins, defindex: number): string | undefined => {
+	let fallback: string | undefined
+	for (const skin of skins) {
+		if (skin.weapon.weapon_id !== defindex) continue
+		if (!skin.weapon.id.startsWith('sfui_')) return skin.weapon.id
+		fallback ??= skin.weapon.id
+	}
+	return fallback
+}
+
+/**
+ * An id string with the vanilla-knife alias resolved. The string-only form of `weaponOf`.
+ *
+ * `weaponOf` needs a `Skin`; this needs only the string, which is what a database column hands you.
+ * Returns the input unchanged when it is already an item name, and when it is an alias the rows
+ * hold no item name for - the same "nothing to resolve with" case `weaponOf` reports as `aliased`.
+ *
+ * ```ts
+ * normalizeWeaponId(skins, 'sfui_wpnhud_knifebayonet') // 'weapon_bayonet'
+ * normalizeWeaponId(skins, 'weapon_ak47')              // 'weapon_ak47'
+ * ```
+ */
+export const normalizeWeaponId = (skins: Skins, id: string): string => {
+	if (!id.startsWith('sfui_')) return id
+	const defindex = defindexForWeaponId(skins, id)
+	if (defindex === undefined) return id
+	return weaponIdForDefindex(skins, defindex) ?? id
+}
+
 export type CategorySummary = {
 	key: SkinCategoryKey
 	/** The `category.id` in the data. */

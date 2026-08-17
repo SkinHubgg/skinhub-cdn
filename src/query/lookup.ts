@@ -57,6 +57,16 @@ export type SkinIndex = {
 	readonly byPaintIndex: Map<number, Skins>
 	/** defindex → every row for that weapon. 63 keys. */
 	readonly byWeapon: Map<number, Skins>
+	/**
+	 * `weapon.id` → the weapon type. 83 keys, because **the aliases are keys here too**.
+	 *
+	 * The one map in this index that is deliberately not 1:1 with a defindex. A caller looking a
+	 * string up got it from somewhere - a database column, a config file, a URL - and that somewhere
+	 * may well hold `sfui_wpnhud_knifebayonet`. Failing to find it would be the wrong answer; the
+	 * `WeaponType` it maps to still carries the item name in `id`, so the alias resolves rather than
+	 * misses. See `weaponById`.
+	 */
+	readonly byWeaponId: Map<string, WeaponType>
 	/** Lowercased `market_hash_name` → the rows it sells as. 15,455 keys. */
 	readonly byMarketHashName: Map<string, MarketEntry>
 
@@ -84,6 +94,14 @@ export type SkinIndex = {
 	weaponOf(skin: Skin): ResolvedWeapon
 	/** The same, straight from a defindex. `undefined` when nothing in the index has it. */
 	weaponFor(defindex: number): WeaponType | undefined
+	/**
+	 * O(1) lookup by `weapon.id`, alias or item name. `undefined` when nothing in the index has it.
+	 *
+	 * This is the direction a WeaponPaints-schema database needs: `wp_player_knife.knife` is the
+	 * item name string, not the defindex, so reading a loadout starts here.
+	 * `weaponById('sfui_wpnhud_knifebayonet')?.id` is `'weapon_bayonet'`.
+	 */
+	weaponById(id: string): WeaponType | undefined
 	/** O(1) `resolveItem`. `stickers`/`keychains` come from `withCatalogs`. */
 	resolve(placement: SkinPlacement): ResolvedItem
 	/** A copy of this index that also resolves sticker and charm ids. */
@@ -135,6 +153,15 @@ const build = (skins: Skins, ids: IdMaps): SkinIndex => {
 	// `weaponOf` does with a scan is a map hit here.
 	const weaponByDefindex = new Map(weapons.map(weapon => [weapon.defindex, weapon]))
 
+	// Every spelling seen in the rows, aliases included, pointed at the resolved type. Built from the
+	// rows rather than from `weapons` because `weapons` holds one id per defindex by construction.
+	const byWeaponId = new Map<string, WeaponType>()
+	for (const skin of skins) {
+		if (byWeaponId.has(skin.weapon.id)) continue
+		const type = weaponByDefindex.get(skin.weapon.weapon_id)
+		if (type) byWeaponId.set(skin.weapon.id, type)
+	}
+
 	const resolveWeapon = (skin: Skin): ResolvedWeapon => {
 		const known = weaponByDefindex.get(skin.weapon.weapon_id)
 		const id = known?.id ?? skin.weapon.id
@@ -161,6 +188,7 @@ const build = (skins: Skins, ids: IdMaps): SkinIndex => {
 		byName,
 		byPaintIndex,
 		byWeapon,
+		byWeaponId,
 		byMarketHashName,
 		weapons,
 		find: ref => byRef.get(refKey(ref.defindex, ref.paintindex)),
@@ -172,6 +200,7 @@ const build = (skins: Skins, ids: IdMaps): SkinIndex => {
 			category === undefined ? weapons : weapons.filter(weapon => weapon.category === category),
 		weaponOf: resolveWeapon,
 		weaponFor: defindex => weaponByDefindex.get(defindex),
+		weaponById: id => byWeaponId.get(id),
 		resolve: placement => resolveItemWith(placement, finders),
 		withCatalogs: catalogs =>
 			build(skins, {

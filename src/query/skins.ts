@@ -112,10 +112,10 @@ const matchesWeapon = (skin: Skin, selector: WeaponSelector): boolean => {
  * Every finish for one weapon, vanilla row included.
  *
  * ```ts
- * skinsForWeapon(skins, 7)                          // 46 AK-47 rows
- * skinsForWeapon(skins, 'weapon_ak47')              // the same 46
- * skinsForWeapon(skins, 'AK-47')                    // the same 46
- * skinsForWeapon(skins, readInspectUrl(url))        // the same 46, for whatever was inspected
+ * skinsForWeapon(skins, 7)                          // 62 AK-47 rows
+ * skinsForWeapon(skins, 'weapon_ak47')              // the same 62
+ * skinsForWeapon(skins, 'AK-47')                    // the same 62
+ * skinsForWeapon(skins, readInspectUrl(url))        // the same 62, for whatever was inspected
  * ```
  *
  * Matching a knife by `weapon.id` works for either spelling: `'weapon_bayonet'` finds the 34

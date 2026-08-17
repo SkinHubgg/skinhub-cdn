@@ -102,6 +102,7 @@ export {
 } from './skins.js'
 export {
 	type CategorySummary,
+	defindexForWeaponId,
 	isEquipment,
 	isGlove,
 	isGun,
@@ -112,11 +113,15 @@ export {
 	listGunTypes,
 	listKnifeTypes,
 	listWeaponTypes,
+	normalizeWeaponId,
 	type ResolvedWeapon,
 	SKIN_CATEGORIES,
 	SKIN_CATEGORY_IDS,
 	type SkinCategoryKey,
 	skinCategory,
+	weaponDefindexes,
+	weaponIdForDefindex,
+	weaponIdsByDefindex,
 	type WeaponRef,
 	type WeaponType,
 	weaponOf,

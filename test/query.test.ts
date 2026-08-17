@@ -26,6 +26,7 @@ import type { Skin, Skins } from '../src/datasets/skins.js'
 import {
 	createSkinIndex,
 	compareByRarity,
+	defindexForWeaponId,
 	findSkin,
 	findSkinById,
 	gloveSkins,
@@ -38,6 +39,7 @@ import {
 	listGunTypes,
 	listKnifeTypes,
 	listWeaponTypes,
+	normalizeWeaponId,
 	paintIndexOf,
 	phasesOf,
 	rarityRank,
@@ -51,6 +53,9 @@ import {
 	skinsWithWear,
 	statTrakSkins,
 	vanillaSkins,
+	weaponDefindexes,
+	weaponIdForDefindex,
+	weaponIdsByDefindex,
 	weaponOf,
 	WEAR_TIERS,
 	wearsOf,
@@ -441,6 +446,83 @@ describe('taxonomy, on the fixture', () => {
 	})
 })
 
+/*
+ * The weapon id as a key. These exist because the defindex is the key everywhere else in this
+ * package, and a WeaponPaints-schema database holds the item NAME in `wp_player_knife.knife`.
+ */
+describe('weapon id as a key, on the fixture', () => {
+	test('the map is one entry per weapon type and agrees with listWeaponTypes', () => {
+		const map = weaponDefindexes(fixtureSkins)
+		const types = listWeaponTypes(fixtureSkins)
+
+		expect(Object.keys(map).length).toBe(types.length)
+		for (const type of types) expect(map[type.id]).toBe(type.defindex)
+
+		// The fixture is deliberately lopsided: one defindex has only its vanilla row, so its `id` IS
+		// the alias and that key is the honest answer. Every other key is an item name.
+		for (const key of Object.keys(map)) {
+			if (!key.startsWith('sfui_')) continue
+			const rows = skinsForWeapon(fixtureSkins, map[key] as number)
+			expect(rows.every(skin => skin.weapon.id.startsWith('sfui_'))).toBe(true)
+		}
+	})
+
+	test('weaponIdsByDefindex is the exact inverse of weaponDefindexes', () => {
+		const forward = weaponDefindexes(fixtureSkins)
+		const back = weaponIdsByDefindex(fixtureSkins)
+
+		expect(Object.keys(back).length).toBe(Object.keys(forward).length)
+		for (const [id, defindex] of Object.entries(forward)) expect(back[defindex]).toBe(id)
+	})
+
+	test('defindexForWeaponId accepts the alias as well as the item name', () => {
+		const vanilla = fixtureSkins.find(skin => skin.weapon.id.startsWith('sfui_')) as Skin
+		const resolved = weaponOf(fixtureSkins, vanilla)
+
+		expect(defindexForWeaponId(fixtureSkins, vanilla.weapon.id)).toBe(vanilla.weapon.weapon_id)
+		expect(defindexForWeaponId(fixtureSkins, resolved.id)).toBe(vanilla.weapon.weapon_id)
+		expect(defindexForWeaponId(fixtureSkins, 'weapon_not_a_thing')).toBeUndefined()
+	})
+
+	test('weaponIdForDefindex prefers the item name over the alias', () => {
+		for (const type of listWeaponTypes(fixtureSkins)) {
+			expect(weaponIdForDefindex(fixtureSkins, type.defindex)).toBe(type.id)
+		}
+		expect(weaponIdForDefindex(fixtureSkins, 999999)).toBeUndefined()
+	})
+
+	test('normalizeWeaponId is the string-only form of weaponOf', () => {
+		for (const skin of fixtureSkins) {
+			expect(normalizeWeaponId(fixtureSkins, skin.weapon.id)).toBe(weaponOf(fixtureSkins, skin).id)
+		}
+		// An id the rows have never heard of comes back untouched rather than throwing.
+		expect(normalizeWeaponId(fixtureSkins, 'sfui_wpnhud_nothing')).toBe('sfui_wpnhud_nothing')
+		expect(normalizeWeaponId(fixtureSkins, 'weapon_ak47')).toBe('weapon_ak47')
+	})
+
+	test('the index keys every spelling, aliases included, and resolves them', () => {
+		const index = createSkinIndex(fixtureSkins)
+
+		expect(index.byWeaponId.size).toBe(new Set(fixtureSkins.map(skin => skin.weapon.id)).size)
+		for (const skin of fixtureSkins) {
+			const type = index.weaponById(skin.weapon.id)
+			expect(type?.defindex).toBe(skin.weapon.weapon_id)
+			// The alias resolves rather than misses: the type it lands on carries the item name.
+			expect(type?.id).toBe(weaponOf(fixtureSkins, skin).id)
+		}
+		expect(index.weaponById('weapon_not_a_thing')).toBeUndefined()
+	})
+
+	test('the index agrees with the free functions', () => {
+		const index = createSkinIndex(fixtureSkins)
+
+		for (const [id, defindex] of Object.entries(weaponDefindexes(fixtureSkins))) {
+			expect(index.weaponById(id)?.defindex).toBe(defindex)
+			expect(index.weaponFor(defindex)?.id).toBe(weaponIdForDefindex(fixtureSkins, defindex))
+		}
+	})
+})
+
 describe('selecting a weapon, on the fixture', () => {
 	test('a defindex, an id and a display name all find the same rows', () => {
 		const byDefindex = skinsForWeapon(fixtureSkins, 3)
@@ -757,6 +839,36 @@ describe.skipIf(!hasFull)('the figures quoted in the doc comments', () => {
 		expect(gunSkins(skins).length).toBe(1483)
 	})
 
+	test('weapon id maps', () => {
+		// The figures the `weaponDefindexes` doc quotes: 63 entries, the 20 aliases dropped, and the
+		// 8 glove ids present without `gloves.json`.
+		const map = weaponDefindexes(skins)
+		expect(Object.keys(map).length).toBe(63)
+		expect(Object.keys(map).filter(id => id.startsWith('sfui_')).length).toBe(0)
+		expect(new Set(skins.map(skin => skin.weapon.id)).size - Object.keys(map).length).toBe(20)
+
+		expect(map.weapon_ak47).toBe(7)
+		expect(map.weapon_bayonet).toBe(500)
+		expect(map.sporty_gloves).toBe(5030)
+
+		const gloveIds = listGloveTypes(skins).map(type => type.id)
+		expect(gloveIds.length).toBe(8)
+		for (const id of gloveIds) expect(map[id]).toBe(defindexForWeaponId(skins, id) as number)
+
+		// Both directions round-trip over the whole export.
+		const back = weaponIdsByDefindex(skins)
+		for (const [id, defindex] of Object.entries(map)) {
+			expect(back[defindex]).toBe(id)
+			expect(weaponIdForDefindex(skins, defindex)).toBe(id)
+		}
+
+		// Every alias in the data normalises to an item name - none is left unresolved on the full
+		// export, which is the difference between it and the deliberately-lopsided fixture.
+		const aliases = [...new Set(skins.map(skin => skin.weapon.id))].filter(id => id.startsWith('sfui_'))
+		expect(aliases.length).toBe(20)
+		for (const alias of aliases) expect(normalizeWeaponId(skins, alias).startsWith('sfui_')).toBe(false)
+	})
+
 	test('weapon type counts', () => {
 		expect(listWeaponTypes(skins).length).toBe(63)
 		expect(Object.fromEntries(SKIN_CATEGORIES.map(key => [key, listWeaponTypes(skins, key).length]))).toEqual({
@@ -770,6 +882,23 @@ describe.skipIf(!hasFull)('the figures quoted in the doc comments', () => {
 		})
 		expect(listGunTypes(skins).length).toBe(34)
 		expect(new Set(skins.map(skin => skin.weapon.id)).size).toBe(83)
+	})
+
+	test('the per-weapon figures the doc comments quote', () => {
+		// `skinsForWeapon`'s example block. This was 46 when it was written and is 62 now, which is
+		// exactly the drift this tier exists to catch.
+		expect(skinsForWeapon(skins, 7).length).toBe(62)
+		expect(skinsForWeapon(skins, 'weapon_ak47').length).toBe(62)
+		expect(skinsForWeapon(skins, 'AK-47').length).toBe(62)
+
+		// The Bayonet split the same block documents: 35 by defindex, 34 by item name, 1 by alias.
+		expect(skinsForWeapon(skins, 500).length).toBe(35)
+		expect(skinsForWeapon(skins, 'Bayonet').length).toBe(35)
+		expect(skinsForWeapon(skins, 'weapon_bayonet').length).toBe(34)
+		expect(skinsForWeapon(skins, 'sfui_wpnhud_knifebayonet').length).toBe(1)
+
+		// `skinsByName`'s example: the seven Bayonet Doppler phases.
+		expect(skinsByName(skins, '★ Bayonet | Doppler').length).toBe(7)
 	})
 
 	test('vanilla, phase and collision counts', () => {

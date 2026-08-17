@@ -1,7 +1,7 @@
 # @skinhub/cdn
 
-Typed data layer over the CS2 game data published to the SkinHub CDN — skins, stickers, gloves,
-agents, music kits, charms, collectibles and Valve's own `items_game` — plus the CS2 inspect-link
+Typed data layer over the CS2 game data published to the SkinHub CDN - skins, stickers, gloves,
+agents, music kits, charms, collectibles and Valve's own `items_game` - plus the CS2 inspect-link
 codec.
 
 The data is **fetched at runtime, never bundled**. The eight files are about 16 MB; shipping them
@@ -17,14 +17,14 @@ import { fetchSkins } from '@skinhub/cdn'
 import { listKnifeTypes, skinsForWeapon, findSkin } from '@skinhub/cdn/query'
 
 const skins = await fetchSkins()
-skins.length                                       // 2161 — guns, knives and gloves, one file
+skins.length                                       // 2161 - guns, knives and gloves, one file
 
 listKnifeTypes(skins)                              // the 20 knife types
 skinsForWeapon(skins, 'AK-47')                     // every AK-47 finish
 findSkin(skins, { defindex: 7, paintindex: 801 })  // AK-47 | Asiimov
 ```
 
-Works on a server and in a browser — **the inspect codec included**. No runtime dependencies, no Node
+Works on a server and in a browser - **the inspect codec included**. No runtime dependencies, no Node
 built-ins, no top-level `await` on import, no global state you did not ask for.
 
 ---
@@ -59,9 +59,9 @@ Eight files under `data/` on the CDN. Row counts are from the export current at 
 | `fetchMusicKits` | `music.json` | 101 | 40 KB | `MusicKit[]` |
 | `fetchGloves` | `gloves.json` | 95 | 24 KB | `Glove[]` |
 | `fetchAgents` | `agents.json` | 81 | 52 KB | `Agent[]` |
-| `fetchItemsGame` | `items_game.json` | — | 6.5 MB | `{ items_game: … }` |
+| `fetchItemsGame` | `items_game.json` | - | 6.5 MB | `{ items_game: … }` |
 
-Anything else on the CDN — `manifest.json`, a file added after this release — is reachable with
+Anything else on the CDN - `manifest.json`, a file added after this release - is reachable with
 `fetchCdnJson(path)` and `fetchCdnData(file)`, so you are never blocked on a release here.
 
 ```ts
@@ -83,7 +83,7 @@ melee, 94 glove and 8 Zeus. Knives and gloves are already in it, so answering "w
 argument and none of them fetch.** That is deliberate: `skinsForWeapon(skins, 'AK-47')` is honest
 about the fact that the download already happened, where a `fetchSkinsForWeapon('AK-47')` would hide
 4.2 MB behind something spelled like a filter and invite you to call it once per row of a picker.
-The subpath imports nothing from the fetch, cache or config layers — a browser build of
+The subpath imports nothing from the fetch, cache or config layers - a browser build of
 `listKnifeTypes` is 1.7 KB with no origin string in it, and `test/bundle.test.ts` checks the built
 bundle rather than the source.
 
@@ -98,15 +98,15 @@ const skins = await fetchSkins()
 listCategories(skins)
 // [{ key: 'rifles', name: 'Rifles', skinCount: 500, weaponCount: 11 }, … 7 in all]
 
-listWeaponTypes(skins)            // 63 — every weapon, ascending by defindex
+listWeaponTypes(skins)            // 63 - every weapon, ascending by defindex
 listWeaponTypes(skins, 'pistols') // 10
 listKnifeTypes(skins)             // 20
 listGloveTypes(skins)             // 8
 // { defindex: 500, id: 'weapon_bayonet', name: 'Bayonet', category: 'knives', skinCount: 35, hasVanilla: true }
 ```
 
-`SkinCategoryKey` is a closed union — `'rifles' | 'pistols' | 'smgs' | 'heavy' | 'knives' | 'gloves'
-| 'equipment'` — so a `switch` over it is exhaustively checked. It is the only closed union in the
+`SkinCategoryKey` is a closed union - `'rifles' | 'pistols' | 'smgs' | 'heavy' | 'knives' | 'gloves'
+| 'equipment'` - so a `switch` over it is exhaustively checked. It is the only closed union in the
 package; the ones describing Valve's own tokens stay open.
 
 **A weapon type is keyed on `weapon.weapon_id`, never on `weapon.id`.** There are 83 distinct
@@ -114,35 +114,61 @@ package; the ones describing Valve's own tokens stay open.
 alias instead of the item name. Group a picker by `weapon.id` and every knife splits in two.
 
 That alias survives a lookup, because the lookups hand back the exporter's row untouched. So when
-you need the weapon's identity — a model path, a route, a group key — read it through `weaponOf`
+you need the weapon's identity - a model path, a route, a group key - read it through `weaponOf`
 rather than off the row:
 
 ```ts
 import { findSkin, weaponOf } from '@skinhub/cdn/query'
 
 const bayonet = findSkin(skins, { defindex: 500, paintindex: 0 })
-bayonet?.weapon.id                  // 'sfui_wpnhud_knifebayonet' — a HUD string. No model has this name.
+bayonet?.weapon.id                  // 'sfui_wpnhud_knifebayonet' - a HUD string. No model has this name.
 weaponOf(skins, bayonet!).id        // 'weapon_bayonet' ✔
 resolveItem(placement, { skins }).weapon?.id  // same, straight off a decoded inspect link
 ```
 
 It bites on the 20 vanilla knives and nowhere else. `weaponOf` also reports `aliased: true` in the
-one case it cannot resolve — a list you have already filtered down to just the vanilla row — so
+one case it cannot resolve - a list you have already filtered down to just the vanilla row - so
 "resolved" and "nothing to resolve with" stay distinguishable.
+
+### Weapon name ↔ defindex
+
+The defindex is the key, but a large family of consumers does not hold one. The [CS2 WeaponPaints
+plugin](https://github.com/Nereziel/cs2-WeaponPaints) schema - what a community server's website
+reads and writes - stores `wp_player_knife.knife` as the item *name* (`weapon_bayonet`) while
+`wp_player_skins.weapon_defindex` beside it is the number. Both directions are derived from the
+rows:
+
+```ts
+import { weaponDefindexes, defindexForWeaponId, weaponIdForDefindex, normalizeWeaponId } from '@skinhub/cdn/query'
+
+weaponDefindexes(skins)                                 // { weapon_ak47: 7, weapon_bayonet: 500, sporty_gloves: 5030, … }
+defindexForWeaponId(skins, 'weapon_bayonet')            // 500
+weaponIdForDefindex(skins, 500)                         // 'weapon_bayonet'
+normalizeWeaponId(skins, 'sfui_wpnhud_knifebayonet')    // 'weapon_bayonet'
+```
+
+`weaponDefindexes` has 63 entries and never keys on an alias; `weaponIdsByDefindex` is its inverse.
+`defindexForWeaponId` and `normalizeWeaponId` *accept* an alias, because a string that arrived from
+a database column may well be one and failing to find it would be the wrong answer. The 8 glove ids
+are in there too - `skins.json` carries the glove rows, so nothing here needs `gloves.json`.
+
+There is no `WEAPON_IDS` constant on purpose. A table baked into this package is stale the moment
+Valve ships a knife; these are functions of the rows you fetched, like everything else here. With an
+index, `index.byWeaponId` and `index.weaponById(id)` are the O(1) forms.
 
 ### Query within one
 
 ```ts
 import { skinsForWeapon, skinsInCategory, knifeSkins, gloveSkins, statTrakSkins } from '@skinhub/cdn/query'
 
-skinsForWeapon(skins, 7)               // by defindex — the key
+skinsForWeapon(skins, 7)               // by defindex - the key
 skinsForWeapon(skins, 'weapon_ak47')   // by item id
 skinsForWeapon(skins, 'AK-47')         // by display name, case-insensitively
 skinsForWeapon(skins, decodedLink)     // by anything with a `defindex`
 
 skinsInCategory(skins, 'knives')       // 576
 knifeSkins(skins)                      // the same 576
-gloveSkins(skins)                      // 94 — "all gloves", no second fetch
+gloveSkins(skins)                      // 94 - "all gloves", no second fetch
 statTrakSkins(skins)                   // 1274
 
 listCollections(skins)                 // 94, with counts
@@ -159,7 +185,7 @@ Return types say what was measured. Single where the key is unique, an array whe
 | defindex + paint index | `findSkin(skins, ref)` | `Skin \| undefined` | the pair is unique across all 2,161 rows |
 | the export's row id | `findSkinById(skins, id)` | `Skin \| undefined` | 2,161 distinct ids |
 | a paint index alone | `skinsByPaintIndex(skins, i)` | `Skin[]` | 113 of 1,480 are worn by more than one weapon |
-| a display name | `skinsByName(skins, name)` | `Skin[]` | 29 names cover 181 rows — the Doppler phases |
+| a display name | `skinsByName(skins, name)` | `Skin[]` | 29 names cover 181 rows - the Doppler phases |
 | a Steam `market_hash_name` | `skinsByMarketHashName(skins, n)` | `Skin[]` | same 29, for the same reason |
 
 ```ts
@@ -168,13 +194,13 @@ findSkin(skins, readInspectUrl(link))               // a decoded link satisfies 
 ```
 
 **A defindex is not an item id and a paint index is not either.** Only the pair is. That matters
-because it is the one identity every source agrees on — an inspect link, a Steam inventory row and a
+because it is the one identity every source agrees on - an inspect link, a Steam inventory row and a
 WeaponPaints database row all carry both numbers.
 
 ### Sorting by grade
 
 `Skin['rarity']` is `{ id, name, color }` with no ordinal and the other six lists carry a bare word,
-so neither sorts on its own. `rarityRank` puts both on Valve's own ladder — the `value` field of
+so neither sorts on its own. `rarityRank` puts both on Valve's own ladder - the `value` field of
 `items_game.rarities`, 0 (`default`) through 7 (`immortal`, which the UI calls Contraband).
 
 ```ts
@@ -186,7 +212,7 @@ stickers.sort(compareByRarity)               // same call, different list
 
 rarityRank(skin)         // reads skin.rarity for you
 rarityRank(skin.rarity)  // identical
-rarityRank(musicKit)     // undefined — music.json has rarity: null on all 101 rows
+rarityRank(musicKit)     // undefined - music.json has rarity: null on all 101 rows
 ```
 
 Both take the row *or* the rarity. `undefined` rather than `-1` for an unranked value, so "no
@@ -195,7 +221,7 @@ rarity" stays distinguishable from "the lowest rarity".
 ### `market_hash_name`, the Steam join key
 
 Steam publishes no defindex on a listing and `skins.json` has no `market_hash_name` column, so the
-join has to be built — exactly, because a name assembled in the wrong order returns no listings,
+join has to be built - exactly, because a name assembled in the wrong order returns no listings,
 which looks precisely like an item nobody is selling.
 
 ```ts
@@ -205,17 +231,17 @@ marketHashName(asiimov, { wear: 'Field-Tested' })            // 'AK-47 | Asiimov
 marketHashName(asiimov, { wear: 'FT', stattrak: true })      // 'StatTrak™ AK-47 | Asiimov (Field-Tested)'
 marketHashName(karambit, { wear: 'FN', stattrak: true })     // '★ StatTrak™ Karambit | Doppler (Factory New)'
 marketHashName(vanillaBayonet)                               // '★ Bayonet'
-marketHashName(defaultDeagle, { wear: 'FT' })                // null — a vanilla gun has no listing
+marketHashName(defaultDeagle, { wear: 'FT' })                // null - a vanilla gun has no listing
 
 marketHashNames(asiimov)  // all 10 keys this row sells under, with their wear/quality flags
 ```
 
-The star comes **before** StatTrak™, and it is already in `skin.name` — all 670 melee and glove rows
+The star comes **before** StatTrak™, and it is already in `skin.name` - all 670 melee and glove rows
 start with `★ `. `null` comes back for any variant that does not exist rather than a string that
 would find nothing: a StatTrak glove, a Souvenir AK, an exterior below the finish's `min_float`.
 
 > **`skin.souvenir` does not mean a Souvenir version exists.** It is `true` on 1,456 rows including
-> `AK-47 | Asiimov` and `M4A4 | Howl`, and it contradicts `stattrak` on 698 of them — no CS2 item is
+> `AK-47 | Asiimov` and `M4A4 | Howl`, and it contradicts `stattrak` on 698 of them - no CS2 item is
 > both. `canBeSouvenir` uses the drop source instead: 319 rows drop from a `… Souvenir Package`, and
 > exactly 0 of those are StatTrak-able. Enumerating from the raw flag would emit roughly 1,100 keys
 > that match nothing on Steam.
@@ -263,7 +289,7 @@ index.resolve(readInspectUrl(link))
 ```
 
 `createSkinIndex(skins)` is the same thing without the fetch. **No index is ever shipped in the
-tarball** — one would be stale the moment the exporter runs, and the failure would be silent: a new
+tarball** - one would be stale the moment the exporter runs, and the failure would be silent: a new
 finish live on the CDN, missing from your picker, with nothing to show for it. The index is built
 from the rows you fetched and lives exactly as long as they do.
 
@@ -280,13 +306,13 @@ Four sources, highest priority first:
 | 3 | environment | `SKINHUB_CDN_URL=https://cdn.example` |
 | 4 | default | `https://cdn.skinhub.gg` |
 
-**On the client, use (1) or (2).** Bundlers only inline the environment variables they are told to —
-Next.js inlines `NEXT_PUBLIC_*`, Vite inlines `VITE_*` — so a browser bundle relying on
+**On the client, use (1) or (2).** Bundlers only inline the environment variables they are told to -
+Next.js inlines `NEXT_PUBLIC_*`, Vite inlines `VITE_*` - so a browser bundle relying on
 `SKINHUB_CDN_URL` silently falls through to the default. This is not a limitation to work around;
 `configureCdn` is the supported path.
 
 ```ts
-// app/providers.tsx — once, at startup
+// app/providers.tsx - once, at startup
 import { configureCdn } from '@skinhub/cdn'
 
 configureCdn({ origin: process.env.NEXT_PUBLIC_CDN_URL })
@@ -303,7 +329,7 @@ import { cdnUrl, dataUrl, resolveCdnOrigin } from '@skinhub/cdn'
 resolveCdnOrigin()                  // 'https://cdn.skinhub.gg'
 cdnUrl('manifest.json')             // 'https://cdn.skinhub.gg/manifest.json'
 dataUrl('skins.json')               // 'https://cdn.skinhub.gg/data/skins.json'
-cdnUrl('x.png', 'https://a.test/')  // 'https://a.test/x.png'  — slashes never double up
+cdnUrl('x.png', 'https://a.test/')  // 'https://a.test/x.png'  - slashes never double up
 ```
 
 ---
@@ -330,7 +356,7 @@ Two behaviours worth knowing:
 - **Requests are sent with `cache: 'no-cache'`.** `data/*.json` keeps the same filename across every
   export and the origin serves it `max-age=60, stale-while-revalidate=300`, so a plain `fetch` can
   hand back a heuristically-fresh copy and never see a new export. `no-cache` forces a conditional
-  request and reuses the cached body on a `304` — one round trip, no payload. Override with
+  request and reuses the cached body on a `304` - one round trip, no payload. Override with
   `init: { cache: 'default' }`.
 - **Concurrent calls for the same URL share one request.** Three components asking for `skins.json`
   on the same tick cost one 4.2 MB download.
@@ -386,7 +412,7 @@ export const getSkins = unstable_cache(() => fetchSkins({ cache: false }), ['ski
 **None at all:** `fetchSkins({ cache: false })`.
 
 Other knobs: `createMemoryCache({ ttlMs, max })` for an isolated instance, `getDefaultCache()` and
-`clearDefaultCache()` for the shared one — the latter is what you call after an export lands.
+`clearDefaultCache()` for the shared one - the latter is what you call after an export lands.
 
 > A cached value is the **parsed** array, shared by reference between callers. Treat it as
 > read-only, or pass `cache: false` if you intend to mutate.
@@ -447,10 +473,10 @@ a 27 KB HTML page**, not JSON. Code that goes straight to `response.json()` repo
 | `@skinhub/cdn` | everything: config, cache, errors, fetch, all eight dataset helpers, the query layer, the inspect codec and the placement layer |
 | `@skinhub/cdn/skins` | `fetchSkins` + the skin types |
 | `@skinhub/cdn/stickers` `…/gloves` `…/agents` `…/music` `…/keychains` `…/collectibles` `…/items-game` | one dataset each |
-| `@skinhub/cdn/query` | every filter, lookup and market-hash-name helper — **pure, fetches nothing** |
-| `@skinhub/cdn/catalog` | `loadSkinIndex` / `loadCatalog` — fetch and index in one call |
+| `@skinhub/cdn/query` | every filter, lookup and market-hash-name helper - **pure, fetches nothing** |
+| `@skinhub/cdn/catalog` | `loadSkinIndex` / `loadCatalog` - fetch and index in one call |
 | `@skinhub/cdn/placement` | placement types, normalisation, the WeaponPaints row format |
-| `@skinhub/cdn/inspect` | inspect-link encode/decode — works in a browser |
+| `@skinhub/cdn/inspect` | inspect-link encode/decode - works in a browser |
 
 **This package has no runtime dependencies.** Nothing to audit, nothing to resolve, and nothing that
 needs a Node built-in.
@@ -460,17 +486,17 @@ Measured with a real bundler against `dist`:
 | a consumer that imports | target | result |
 |---|---|---|
 | `fetchGloves` from `@skinhub/cdn/gloves` | browser | 4.5 KB, and no trace of the other seven datasets |
-| `fetchGloves` from `@skinhub/cdn` | browser | 4.5 KB — a named import off the barrel costs the same |
+| `fetchGloves` from `@skinhub/cdn` | browser | 4.5 KB - a named import off the barrel costs the same |
 | `formatStickerRow` from `@skinhub/cdn/placement` | browser | 2.0 KB |
 | `listKnifeTypes` from `@skinhub/cdn/query` | browser | 1.7 KB, with no origin, fetch or cache in it |
-| `listKnifeTypes` from `@skinhub/cdn` | browser | 1.7 KB — again the same through the barrel |
+| `listKnifeTypes` from `@skinhub/cdn` | browser | 1.7 KB - again the same through the barrel |
 | `marketHashName` from `@skinhub/cdn/query` | browser | 2.5 KB |
 | `resolveItem` from `@skinhub/cdn/query` | browser | 5.5 KB |
-| `import * as query` from `@skinhub/cdn/query` | browser | 19.3 KB — the whole surface, still network-free |
-| `loadSkinIndex` from `@skinhub/cdn/catalog` | browser | 14.8 KB — this one does fetch, by design |
+| `import * as query` from `@skinhub/cdn/query` | browser | 19.3 KB - the whole surface, still network-free |
+| `loadSkinIndex` from `@skinhub/cdn/catalog` | browser | 14.8 KB - this one does fetch, by design |
 | `buildInspectUrl` from `@skinhub/cdn/inspect` | browser | 16.7 KB |
 | `buildInspectUrl` from `@skinhub/cdn/inspect` | node | 16.7 KB |
-| `import * as cdn` from `@skinhub/cdn` | browser | 59.8 KB — everything, because a namespace import keeps everything |
+| `import * as cdn` from `@skinhub/cdn` | browser | 59.8 KB - everything, because a namespace import keeps everything |
 
 ### The inspect codec used to be server-only. It is not any more.
 
@@ -479,30 +505,30 @@ dependency list includes `steam-user` and `node-cs2` for a Game Coordinator roun
 never makes. Installing this package used to put **89 MB across 60 packages** in your `node_modules`;
 it now puts **512 KB across one**. And because `cs2-inspect-lib` reached its Steam transports through
 an `await import()` inside a method, which bundlers still follow, bundling the codec for a browser
-**failed** on `tls`, `dns` and `readline`, while bundling it for Node produced about **29 MB** — an
+**failed** on `tls`, `dns` and `readline`, while bundling it for Node produced about **29 MB** - an
 entire Steam client, for a protobuf encode that never talks to Steam. That is why the codec was kept
 out of the root export.
 
-The two functions actually needed from it, `createInspectUrl` and `decodeMaskedUrl`, are pure maths —
+The two functions actually needed from it, `createInspectUrl` and `decodeMaskedUrl`, are pure maths -
 a protobuf message and a CRC, no network and no Steam anywhere in them. They are now written natively
 in one module with **no imports at all**, `cs2-inspect-lib` is gone from the dependency list, and the
 same consumer that would not build now bundles to 16.7 KB for a browser. So the codec is in the root
 export too; `@skinhub/cdn/inspect` stays as a subpath for anyone who wants the guarantee without
 relying on a bundler.
 
-Because a wrong byte in an inspect link does not throw — it produces a link that resolves to the
-wrong skin, which reads as a data problem rather than a codec problem — the port is held to a corpus
+Because a wrong byte in an inspect link does not throw - it produces a link that resolves to the
+wrong skin, which reads as a data problem rather than a codec problem - the port is held to a corpus
 rather than to an example. `cs2-inspect-lib` is kept as a **devDependency**, and **2,326 items plus 41
 URL forms are encoded and decoded by both implementations on every test run** and asserted identical
 byte for byte, including the ones both must refuse. The corpus is built from the real export: every
-`[defindex, paintindex]` pair in `skins.json`, real sticker and charm ids, and deliberate edges —
+`[defindex, paintindex]` pair in `skins.json`, real sticker and charm ids, and deliberate edges -
 float32 extremes, every varint width boundary, seed 0 and 4294967295, all five sticker slots, StatTrak
 on and off, nametags in Hebrew, CJK and emoji, and the 20 vanilla rows where `paint_index` is `null`.
 A second test perturbs one token of the codec at a time and requires the corpus to catch every
 perturbation, so the comparison cannot pass by accident.
 
-`@skinhub/cdn/placement` is still the smallest useful piece — placement types, normalisation and the
-WeaponPaints row format, no protobuf, 2 KB — for a server that stores placement but never encodes a
+`@skinhub/cdn/placement` is still the smallest useful piece - placement types, normalisation and the
+WeaponPaints row format, no protobuf, 2 KB - for a server that stores placement but never encodes a
 link.
 
 ---
@@ -522,7 +548,7 @@ keys**, not `null`. The difference is what "no finish" looks like:
   `rarity.id === 'rarity_default_weapon'`.
 
 That second group is why `skin.wears.length` is the most likely crash in code written against the
-raw type — it throws on 55 of 2,161 rows.
+raw type - it throws on 55 of 2,161 rows.
 
 ```ts
 import { isVanilla, wearsOf, paintIndexOf } from '@skinhub/cdn/query'
@@ -535,11 +561,11 @@ for (const skin of skins) {
 }
 ```
 
-**`phase` is on 181 of 2,161 rows**, and absent — never null — on the rest. It is
+**`phase` is on 181 of 2,161 rows**, and absent - never null - on the rest. It is
 `'Phase 1' | … | 'Black Pearl'` widened so a new phase is not a compile error. Those 181 rows are
 also the only reason `name` is not unique: 29 names cover all of them.
 
-**`souvenir` is not "a Souvenir version exists".** See [Querying](#querying) — use `canBeSouvenir`.
+**`souvenir` is not "a Souvenir version exists".** See [Querying](#querying) - use `canBeSouvenir`.
 
 **`gloves.json` has one row where `paint` is a `number`** (the `Gloves | Default` row); the other 94
 are strings. Join it against `Skin['paint_index']` through `String()`.
@@ -551,19 +577,19 @@ not `''`. Check for it before building a model path.
 branch on it.
 
 **Images can be the empty string.** `''` means the export has no icon for that row and is
-deliberate — a URL that 404s would be worse. It is common: 643 of 11,788 stickers, 190 of 715
+deliberate - a URL that 404s would be worse. It is common: 643 of 11,788 stickers, 190 of 715
 collectibles, and some collection and crate icons.
 
 ```ts
 {sticker.image ? <img src={sticker.image} /> : <Placeholder />}
 ```
 
-**`items_game.json` is not an array.** It is `{ items_game: { …33 sections… } }` — Valve's KeyValues
+**`items_game.json` is not an array.** It is `{ items_game: { …33 sections… } }` - Valve's KeyValues
 converted to JSON. The section names are typed so `data.items_game.paint_kits` autocompletes; the
 values are `unknown`, because writing an interface for a file that changes with every CS2 update
 would be inventing structure the file does not guarantee.
 
-Rarity tokens (`'rare' | 'mythical' | …`) and other string unions are **open** — they autocomplete
+Rarity tokens (`'rare' | 'mythical' | …`) and other string unions are **open** - they autocomplete
 to the values in the current export but still accept a new one, so a CS2 update does not become a
 compile error in your app.
 
@@ -575,7 +601,7 @@ Encode and decode CS2 inspect links, and read/write the placement format the
 [CS2 WeaponPaints plugin](https://github.com/Nereziel/cs2-WeaponPaints) stores.
 
 ```ts
-// or from '@skinhub/cdn' — same functions, and a named import tree-shakes to the same bytes
+// or from '@skinhub/cdn' - same functions, and a named import tree-shakes to the same bytes
 import { buildInspectUrl, readInspectUrl, toGameCommand, isLegacyInspectUrl } from '@skinhub/cdn/inspect'
 
 const url = buildInspectUrl({
@@ -591,23 +617,23 @@ const url = buildInspectUrl({
 })
 // 'steam://rungame/730/…/+csgo_econ_action_preview%2000180720…'
 
-toGameCommand(url)  // 'csgo_econ_action_preview 00180720…' — paste into the CS2 console
+toGameCommand(url)  // 'csgo_econ_action_preview 00180720…' - paste into the CS2 console
 readInspectUrl(url) // back to a SkinPlacement, all five sticker slots present
 ```
 
-`readInspectUrl` handles **masked** links only — the `+csgo_econ_action_preview <hex>` form that
+`readInspectUrl` handles **masked** links only - the `+csgo_econ_action_preview <hex>` form that
 carries the item data. The unmasked `S…A…D…` / `M…A…D…` market and inventory links needed a Game
 Coordinator round trip Valve has shut down, so there is nothing to read out of them. Check first:
 
 ```ts
 if (isLegacyInspectUrl(input)) {
-  // no item data in this link — ask the user for a masked one
+  // no item data in this link - ask the user for a masked one
 }
 ```
 
 ### Placement is stored in the game's own field names
 
-`slot`, `sticker_id`, `wear`, `scale`, `rotation`, `offset_x`, `offset_y`, `offset_z`, `pattern` —
+`slot`, `sticker_id`, `wear`, `scale`, `rotation`, `offset_x`, `offset_y`, `offset_z`, `pattern` -
 `CEconItemPreviewDataBlock.Sticker` verbatim, nothing renamed or negated. Offsets are UV space
 centred on the slot anchor, `-0.5 … 0.5`, which is the shader's own `g_vStickerNOffset` range. If
 your UI works in `0 … 1`, convert with `offsetFromNormalized` / `normalizedFromOffset`.
@@ -618,12 +644,12 @@ your UI works in `0 … 1`, convert with `offsetFromNormalized` / `normalizedFro
 game will reject:
 
 - ids and seeds (`defindex`, `paintindex`, `paintseed`, `sticker_id`, `pattern`, `stattrak_count`)
-  go through `u32` — truncated, clamped, unsigned. The WeaponPaints plugin parses these with
+  go through `u32` - truncated, clamped, unsigned. The WeaponPaints plugin parses these with
   `uint.TryParse`, which **silently skips** an item whose id carries a sign, a decimal point or an
   exponent: the sticker just never appears in game, with no error anywhere.
 - floats go through `Math.fround`, because they are protobuf `float`s.
 - a `sticker_id` of `0` normalises the whole slot to empty, dropping offsets left behind by a
-  removed sticker — a state no inspect link can represent.
+  removed sticker - a state no inspect link can represent.
 
 A practical consequence: `paintwear: 0.154` is a float64, and the wire holds float32. Normalise once
 and the value is stable forever after:
@@ -646,8 +672,8 @@ formatStickerRow(placement)      // '7691;0;0.1;-0.2;0.25;0.8;12'
 parseStickerRow(row, slot)       // -> StickerPlacement; malformed or null input gives an empty slot
 ```
 
-Floats are written at the shortest decimal that reads back as the same float32 — `0.3`, not
-`0.30000001192092896` — because seven of the latter overflow the plugin's `varchar(128)` column and
+Floats are written at the shortest decimal that reads back as the same float32 - `0.3`, not
+`0.30000001192092896` - because seven of the latter overflow the plugin's `varchar(128)` column and
 the extra digits carry no information.
 
 `migrateLegacyKeychainRow(row)` rewrites charm rows written by the pre-2026 schema, which stored
@@ -686,29 +712,32 @@ File-name constants, if you are keying a cache or a preload by them: `SKINS_FILE
 
 ### `@skinhub/cdn/query`
 
-Taxonomy — `listCategories` · `listWeaponTypes` · `listKnifeTypes` · `listGloveTypes` ·
+Taxonomy - `listCategories` · `listWeaponTypes` · `listKnifeTypes` · `listGloveTypes` ·
 `listGunTypes` · `skinCategory` · `isKnife` · `isGlove` · `isGun` · `isEquipment` · `isVanilla` ·
 `SKIN_CATEGORIES` · `SKIN_CATEGORY_IDS`
 
-Filters — `skinsForWeapon` · `skinsInCategory` · `knifeSkins` · `gloveSkins` · `gunSkins` ·
+Weapon ids - `weaponDefindexes` · `weaponIdsByDefindex` · `defindexForWeaponId` ·
+`weaponIdForDefindex` · `normalizeWeaponId`
+
+Filters - `skinsForWeapon` · `skinsInCategory` · `knifeSkins` · `gloveSkins` · `gunSkins` ·
 `vanillaSkins` · `statTrakSkins` · `souvenirSkins` · `skinsWithWear` · `skinsInCollection` ·
 `skinsInCrate` · `listCollections` · `listCrates` · `phasesOf`
 
-Lookups — `findSkin` · `findSkinById` · `skinsByName` · `skinsByPaintIndex` ·
+Lookups - `findSkin` · `findSkinById` · `skinsByName` · `skinsByPaintIndex` ·
 `skinsByMarketHashName` · `paintIndexForMarketHashName` · `createSkinIndex`
 
-Fields — `weaponOf` · `paintIndexOf` · `wearsOf` · `floatRangeOf` · `clampFloat`
+Fields - `weaponOf` · `paintIndexOf` · `wearsOf` · `floatRangeOf` · `clampFloat`
 
-Market — `marketHashName` · `marketHashNames` · `marketHashNameIndex` · `parseMarketHashName` ·
+Market - `marketHashName` · `marketHashNames` · `marketHashNameIndex` · `parseMarketHashName` ·
 `canBeStatTrak` · `canBeSouvenir` · `isUntradable` · `STATTRAK_PREFIX` · `SOUVENIR_PREFIX` ·
 `STAR_PREFIX`
 
-Wear and rarity — `WEAR_TIERS` · `wearTier` · `wearTierForFloat` · `rarityRank` ·
+Wear and rarity - `WEAR_TIERS` · `wearTier` · `wearTierForFloat` · `rarityRank` ·
 `compareByRarity` · `RARITY_RANKS` · `WEAPON_RARITY_RANKS`
 
-Resolve — `resolveItem` · `resolveItemWith` · `hasStickers` · `hasKeychain`
+Resolve - `resolveItem` · `resolveItemWith` · `hasStickers` · `hasKeychain`
 
-Types — `SkinCategoryKey` · `WeaponRef` · `WeaponType` · `ResolvedWeapon` · `WeaponSelector` ·
+Types - `SkinCategoryKey` · `WeaponRef` · `WeaponType` · `ResolvedWeapon` · `WeaponSelector` ·
 `CategorySummary` · `NamedGroup` · `SkinRef` · `SkinIndex` · `MarketEntry` · `MarketVariant` ·
 `MarketHashNameOptions` · `ParsedMarketHashName` · `ResolvedItem` · `ResolvedSticker` ·
 `ResolvedKeychain` · `ItemCatalogs` · `ItemFinders` · `WearTier` · `WearTierId` · `WearName` ·
@@ -726,7 +755,7 @@ Types — `SkinCategoryKey` · `WeaponRef` · `WeaponType` · `ResolvedWeapon` �
 
 ### `@skinhub/cdn/inspect`
 `buildInspectUrl` · `readInspectUrl` · `toEconItem` · `fromEconItem` · `toGameCommand` ·
-`isLegacyInspectUrl` · `EconItem` — plus everything from `/placement`, re-exported.
+`isLegacyInspectUrl` · `EconItem` - plus everything from `/placement`, re-exported.
 
 Everything in this section and the one above it is also on the root `@skinhub/cdn` export.
 
@@ -752,13 +781,13 @@ bun run test:live
 ```
 
 `test/fixtures/` holds a small sample of each real file, chosen so every edge case documented above
-appears in it — the vanilla skins, the numeric glove `paint`, the `"null"` agent models, an empty
+appears in it - the vanilla skins, the numeric glove `paint`, the `"null"` agent models, an empty
 image, every nullable field null at least once. `test/types.test.ts` asserts both that the fixtures
 validate and that those edge cases are actually present, so the validator cannot pass by being fed
 easy rows.
 
 `test/fixtures/inspect-corpus.json` is the other kind of fixture: the real ids the inspect corpus is
-generated from — every `[defindex, paintindex]` pair in `skins.json`, a sample of sticker ids across
+generated from - every `[defindex, paintindex]` pair in `skins.json`, a sample of sticker ids across
 the whole range, and every charm id. `test/corpus.ts` crosses those with a seeded PRNG and a list of
 named edge cases; `test/codec.test.ts` runs the result through `src/codec.ts` and through
 `cs2-inspect-lib` and asserts the hex matches byte for byte; `test/codec-mutation.test.ts` perturbs
@@ -775,7 +804,7 @@ bun run release 1.2.0
 bun run release patch --dry-run
 ```
 
-Bumps the version, publishes, then commits and tags — and deliberately does **not** push; it prints
+Bumps the version, publishes, then commits and tags - and deliberately does **not** push; it prints
 the command. It refuses to run on a dirty tree, refuses a version already on the registry, and
 restores the previous version if typecheck, build or publish fails. `prepublishOnly` runs typecheck
 and a clean build, so `npm publish` by hand cannot ship a broken package either.
