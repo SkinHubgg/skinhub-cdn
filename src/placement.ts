@@ -175,6 +175,45 @@ export const makeKeychainPlacement = (placement: Partial<KeychainPlacement>): Ke
  *
  * Always returns all five sticker slots, and a charm rather than `null`. Idempotent.
  */
+/**
+ * *** THE FIVE SLOTS, FILLED SO THAT NOTHING THE CALLER HANDED IN CAN VANISH. ***
+ *
+ * This used to be `STICKER_SLOTS.map(slot => list.find(s => s.slot === slot))`, which silently drops
+ * every entry whose slot another entry already claimed. That is not hypothetical. A real link the
+ * owner sent carries FIVE stickers whose `slot` fields read `0, 0, 1, 2, 3`:
+ *
+ *     {slot:0, id:9946}  {slot:0, id:9966}  {slot:1, id:10203}  {slot:2, id:10205}  {slot:3, id:10204}
+ *
+ * The game draws five. The find-by-slot read four, and 9966 disappeared with nothing reported.
+ *
+ * THE RULE: walk the list IN ORDER; an entry keeps its own slot when that slot is in range and still
+ * free, and otherwise takes the lowest free one. On a well-formed list - every slot distinct, which
+ * is every link this package writes and every link the game writes - that is bit for bit the old
+ * behaviour, INCLUDING the case that made the old rule look right: a lone sticker declaring `slot: 3`
+ * still lands in slot 3 rather than being pushed to the front by its position. On the malformed list
+ * above it yields `0, 1, 2, 3, 4` in wire order, which is the five the game draws.
+ *
+ * FIVE IS FIVE. An entry past the fifth has no slot left to occupy; that is the item's capacity, not
+ * a keying mistake, and it is the one case where something is left behind.
+ *
+ * Entries with `sticker_id 0` are skipped rather than allowed to claim a slot: the game omits an
+ * empty slot from a link entirely, and `makeStickerPlacement` normalises one to empty anyway, so an
+ * empty entry holding a slot against a real sticker would be a hole punched by nothing.
+ */
+const fillStickerSlots = (stickers: readonly StickerPlacement[] | undefined): StickerPlacement[] => {
+	const filled: (StickerPlacement | null)[] = STICKER_SLOTS.map(() => null)
+
+	for (const sticker of stickers ?? []) {
+		if (!sticker || u32(sticker.sticker_id ?? 0) === 0) continue
+		const claimed = Math.trunc(sticker.slot)
+		const free = claimed >= 0 && claimed < filled.length && !filled[claimed]
+		const slot = free ? claimed : filled.findIndex(taken => !taken)
+		if (slot < 0) break
+		filled[slot] = makeStickerPlacement({ ...sticker, slot })
+	}
+	return STICKER_SLOTS.map((slot, index) => filled[index] ?? emptySticker(slot))
+}
+
 export const makeSkinPlacement = (placement: SkinPlacement): SkinPlacement => ({
 	defindex: u32(placement.defindex),
 	paintindex: u32(placement.paintindex),
@@ -183,10 +222,7 @@ export const makeSkinPlacement = (placement: SkinPlacement): SkinPlacement => ({
 	nametag: placement.nametag ?? null,
 	stattrak: Boolean(placement.stattrak),
 	stattrak_count: placement.stattrak ? u32(placement.stattrak_count ?? 0) : 0,
-	stickers: STICKER_SLOTS.map(slot => {
-		const found = placement.stickers?.find(sticker => sticker.slot === slot)
-		return found ? makeStickerPlacement({ ...found, slot }) : emptySticker(slot)
-	}),
+	stickers: fillStickerSlots(placement.stickers),
 	keychain: placement.keychain ? makeKeychainPlacement(placement.keychain) : emptyKeychain(),
 })
 

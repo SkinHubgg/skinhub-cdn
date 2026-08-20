@@ -28,13 +28,11 @@
 import { createInspectUrl, decodeMaskedUrl, type EconItem, type Sticker as InspectSticker } from './codec.js'
 import {
 	emptyKeychain,
-	emptySticker,
 	type KeychainPlacement,
 	makeKeychainPlacement,
 	makeSkinPlacement,
 	makeStickerPlacement,
 	type SkinPlacement,
-	STICKER_SLOTS,
 	type StickerPlacement,
 } from './placement.js'
 
@@ -123,7 +121,19 @@ export const toEconItem = (skin: SkinPlacement): EconItem => {
 	}
 }
 
-/** The inverse. Always returns all five sticker slots, empty ones included. */
+/**
+ * The inverse. Always returns all five sticker slots, empty ones included.
+ *
+ * *** THE WIRE'S STICKER LIST IS PASSED THROUGH IN ORDER, NOT INDEXED BY `slot`. *** It used to be
+ * `STICKER_SLOTS.map(slot => item.stickers.find(s => s.slot === slot))`, and a real link whose five
+ * stickers declare `slot 0, 0, 1, 2, 3` decoded to four: the second entry claimed a slot the first
+ * already had and was dropped with nothing reported, while the game drew all five. `makeSkinPlacement`
+ * owns the assignment now and never discards an entry it has room for - see `fillStickerSlots`.
+ *
+ * The offsets are passed through as they arrive, missing ones included: the last entry of that same
+ * link is `{slot:3, id:10204}` with no offsets at all, which is a sticker nobody moved, and
+ * `makeStickerPlacement` gives it the same defaults it would have had from an empty column.
+ */
 export const fromEconItem = (item: EconItem): SkinPlacement =>
 	makeSkinPlacement({
 		defindex: item.defindex,
@@ -133,10 +143,7 @@ export const fromEconItem = (item: EconItem): SkinPlacement =>
 		nametag: item.customname ?? null,
 		stattrak: typeof item.killeaterscoretype === 'number',
 		stattrak_count: item.killeatervalue ?? 0,
-		stickers: STICKER_SLOTS.map(slot => {
-			const found = item.stickers?.find(sticker => sticker.slot === slot)
-			return found ? makeStickerPlacement({ ...found, slot }) : emptySticker(slot)
-		}),
+		stickers: (item.stickers ?? []).map(sticker => makeStickerPlacement({ ...sticker, slot: sticker.slot })),
 		keychain: item.keychains?.[0] ? makeKeychainPlacement({ ...item.keychains[0], slot: 0 }) : emptyKeychain(),
 	})
 

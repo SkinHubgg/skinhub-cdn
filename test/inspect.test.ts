@@ -176,6 +176,57 @@ describe('fromEconItem', () => {
 		expect(placement.nametag).toBeNull()
 		expect(placement.stattrak).toBe(false)
 	})
+
+	/**
+	 * *** A REAL LINK WHOSE FIVE STICKERS DECLARE `slot 0, 0, 1, 2, 3`. *** The game draws five. The
+	 * old find-by-slot read four: the second entry claimed a slot the first already had and vanished
+	 * with nothing reported. The hex is the owner's, an AWP | Black Box with five stickers and a charm.
+	 */
+	const COLLIDING_SLOTS =
+		'00180920BB0B280038004001620F080010DA4D3DEBB89EBE452686B1BD620F080010EE4D3D2544F03D4556A58FBC620F080110DB4F3D1C828D3E45BFA14C3D620F080210DD4F3D457F9D3E45313389BB6205080310DC4FA201130800100B3DAED2A3C0458873393F4DBDD1F9404F48FAF5'
+
+	test('two stickers claiming the same slot both survive, in wire order', () => {
+		const placement = readInspectUrl(COLLIDING_SLOTS)
+		expect(placement.stickers.map(sticker => sticker.sticker_id)).toEqual([9946, 9966, 10203, 10205, 10204])
+		// The second entry keeps its OWN offsets, not the first's and not zero.
+		expect(placement.stickers[1]?.offset_x).toBeCloseTo(0.11731747537851334, 6)
+		// And the fifth carries no offsets at all on the wire, which is a sticker nobody moved.
+		expect(placement.stickers[4]).toMatchObject({ slot: 4, sticker_id: 10204, offset_x: 0, offset_y: 0 })
+	})
+
+	test('a lone sticker keeps the slot it declares rather than being pushed to the front', () => {
+		const placement = fromEconItem({
+			defindex: 7,
+			paintindex: 44,
+			paintseed: 0,
+			paintwear: 0,
+			stickers: [{ slot: 3, sticker_id: 55 }],
+		})
+		expect(placement.stickers.map(sticker => sticker.sticker_id)).toEqual([0, 0, 0, 55, 0])
+	})
+
+	test('a sticker declaring a slot that does not exist is re-homed, not dropped', () => {
+		const placement = fromEconItem({
+			defindex: 7,
+			paintindex: 44,
+			paintseed: 0,
+			paintwear: 0,
+			stickers: [{ slot: 9, sticker_id: 55 }],
+		})
+		expect(placement.stickers.map(sticker => sticker.sticker_id)).toEqual([55, 0, 0, 0, 0])
+	})
+
+	test('the encoder never writes two entries with the same slot', () => {
+		const item = toEconItem(readInspectUrl(COLLIDING_SLOTS))
+		const slots = (item.stickers ?? []).map(sticker => sticker.slot)
+		expect(slots).toEqual([0, 1, 2, 3, 4])
+		expect(new Set(slots).size).toBe(slots.length)
+	})
+
+	test('the colliding link round-trips: five in, five out, same ids and offsets', () => {
+		const first = readInspectUrl(COLLIDING_SLOTS)
+		expect(readInspectUrl(buildInspectUrl(first))).toEqual(first)
+	})
 })
 
 describe('url helpers', () => {
