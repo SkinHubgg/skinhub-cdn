@@ -767,13 +767,109 @@ const decodeSticker = (reader: Reader): Sticker => {
 }
 
 /**
- * Decode the hex payload of a masked link.
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════════
+ * *** XOR-MASKED PAYLOADS: THE SAME FRAMING, SCRAMBLED BY ONE BYTE THAT THE PAYLOAD CARRIES ITSELF. ***
+ *
+ * A large family of links in the wild is `0x00 ++ protobuf ++ checksum` XOR'd byte-for-byte with a
+ * single-byte key. Fed to the reader as-is, the ciphertext walks as protobuf until it hits a length
+ * prefix that runs off the end of the buffer — so the whole family reported itself as
+ * `Buffer underrun while skipping length-delimited field`, i.e. as a TRUNCATED link, and everyone who
+ * hit it went off to re-copy a link that was already complete.
+ *
+ * *** THE KEY IS THE FIRST BYTE, AND THAT IS ARITHMETIC RATHER THAN A GUESS. *** Byte 0 of the
+ * plaintext is always the `0x00` frame prefix, so `cipher[0] = 0x00 ^ key = key`. The scheme carries
+ * its own key in the clear, and an ORDINARY unmasked link is exactly the `key = 0x00` case — which is
+ * why {@link unmaskHex} returns null for one rather than special-casing it. XOR by zero is the
+ * identity; there is nothing to retry.
+ *
+ * *** VERIFIED BY DECODING, NOT BY EYE. *** Three captured payloads of 27, 82 and 72 bytes, each
+ * parsing as complete well-formed protobuf under one constant key, and each resolving to a real row
+ * in the published `skins.json` / `stickers.json`:
+ *
+ *     B6A6795F27…  key 0xB6  ->  defindex 34 / paint 331  = MP9 | Arctic Tri-Tone, seed 231,
+ *                                wear 0.10343605, sticker 8987, charm 19 at pattern 44251
+ *     EEFE0E167C…  key 0xEE  ->  defindex 9  / paint 1239 = AWP | Black Nile, seed 35,
+ *                                wear 0.30377471, stickers 7251 and 5947
+ *     4353435BFA…  key 0x43  ->  defindex 1209 (the sticker TOOL, not a weapon), sticker id 10478
+ *                                = Sticker | Gaimin Gladiators (Foil) | Cologne 2026
+ *
+ * A wrong key does not produce that: one wrong byte anywhere in a varint stream derails every field
+ * after it, so 72 bytes of coherent output is the proof.
+ *
+ * *** WHAT DOES NOT CHECK OUT, STATED RATHER THAN GLOSSED: THE TRAILING FOUR BYTES. *** Valve's
+ * `(crc & 0xFFFF) ^ (len * crc)` does not reproduce them, and neither does any of six common CRC-32
+ * variants (IEEE, JAM, BZIP2, MPEG-2, POSIX, Castagnoli) over any of four plausible bodies —
+ * plaintext or ciphertext, framed or unframed. Brute-forced, not assumed. So these were produced by a
+ * generator that writes its own trailer rather than by re-masking a Valve link. It costs nothing: this
+ * decoder has never verified that checksum and the module comment says why. The protobuf either parses
+ * or it does not, which is the check that actually protects the reader.
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════════
+ */
+const HEX_DIGITS = '0123456789ABCDEF'
+
+/**
+ * The payload with the mask taken off, or null when there is no mask to take off.
+ *
+ * NOT `toString(16).padStart(…)`: that exact expression is a mutation target in
+ * `test/codec-mutation.test.ts`, which requires each of its search strings to appear exactly once in
+ * this file. A table lookup says the same thing and keeps that test's grip on `hexOf`.
+ */
+const unmaskHex = (hex: string): string | null => {
+	// An even number of nibbles, and enough of them to hold a frame prefix, a field and a trailer.
+	if (hex.length < 12 || hex.length % 2 !== 0) return null
+
+	const key = Number.parseInt(hex.slice(0, 2), 16)
+	// NaN for non-hex (the caller has already validated, but this is the guard that makes that
+	// unnecessary to know), and 0 is the unmasked form — see the header.
+	if (!key) return null
+
+	let out = ''
+	for (let i = 0; i < hex.length; i += 2) {
+		const byte = Number.parseInt(hex.slice(i, i + 2), 16) ^ key
+		// Both indices are 0..15 by construction; the assertions are for `noUncheckedIndexedAccess`.
+		out += (HEX_DIGITS[byte >> 4] as string) + (HEX_DIGITS[byte & 0x0f] as string)
+	}
+	return out
+}
+
+/**
+ * Decode the hex payload of a masked link, XOR-masked or not.
+ *
+ * *** THE UNMASK IS A RETRY AND NOT A SNIFF, which is what makes it impossible for it to break a link
+ * that already worked. *** The bytes go to the reader exactly as before and are only looked at again
+ * once the reader has refused, so every payload that decodes today takes a byte-identical path — the
+ * new behaviour lives entirely inside what used to be a thrown error. That also keeps the equivalence
+ * suite honest: every refusal in `decodeCases()` is `00`-prefixed, so the key is zero and no retry is
+ * even attempted.
+ *
+ * THE FIRST FAILURE IS THE ONE THAT IS THROWN. If the retry fails too, the interesting error is the
+ * one about the payload the caller actually passed — "buffer underrun", "invalid wire type" — not one
+ * about a byte string they never saw and cannot check. The retry is an implementation detail and must
+ * not be able to name itself in a message shown to somebody.
+ */
+const decodeMaskedData = (hexData: string): EconItem => {
+	const hex = hexData.trim().toUpperCase()
+	try {
+		return decodeFramedHex(hex)
+	} catch (failure) {
+		const unmasked = unmaskHex(hex)
+		if (unmasked === null) throw failure
+		try {
+			return decodeFramedHex(unmasked)
+		} catch {
+			throw failure
+		}
+	}
+}
+
+/**
+ * One pass over `0x00 ++ protobuf ++ checksum`.
  *
  * The last four bytes are dropped without being checked. That is not an oversight — see the module
  * comment on why verifying the checksum would be a new failure mode rather than a fix.
  */
-const decodeMaskedData = (hexData: string): EconItem => {
-	let hex = hexData.trim().toUpperCase()
+const decodeFramedHex = (input: string): EconItem => {
+	let hex = input
 	if (hex.startsWith('00')) hex = hex.slice(2)
 	if (hex.length < 16) throw new Error(`Hex data too short after processing: ${hex.length}`)
 	hex = hex.slice(0, -8)

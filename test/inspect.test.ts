@@ -214,6 +214,111 @@ describe('url helpers', () => {
 	})
 })
 
+/**
+ * ═════════════════════════════════════════════════════════════════════════════════════════════
+ * *** XOR-MASKED PAYLOADS — see the block comment on `unmaskHex` in `src/codec.ts`. ***
+ *
+ * These used to report themselves as TRUNCATED links ("Buffer underrun while skipping
+ * length-delimited field"), which sent everyone who hit one off to re-copy a link that was already
+ * complete. They are not in `codec.test.ts` because they are the one place this codec deliberately
+ * DIVERGES from `cs2-inspect-lib`: the reference refuses them, and that suite exists to assert the two
+ * agree. So the behaviour is pinned here, on the package's own surface.
+ */
+describe('XOR-masked inspect links', () => {
+	/** Mask a payload the way the wild does: XOR every byte, including the frame prefix and trailer. */
+	const mask = (url: string, key: number): string => {
+		const hex = url.split('%20')[1] as string
+		let out = ''
+		for (let i = 0; i < hex.length; i += 2) {
+			const byte = Number.parseInt(hex.slice(i, i + 2), 16) ^ key
+			out += byte.toString(16).padStart(2, '0').toUpperCase()
+		}
+		return out
+	}
+
+	/**
+	 * THE PROPERTY, over every key a payload can carry.
+	 *
+	 * Encode a fully-loaded item — StatTrak, a nametag, three stickers at their placements and a charm
+	 * — mask it, and require the decode to come back byte-equal to the unmasked one. Round-tripping
+	 * through all 255 non-zero keys is what proves the key is READ rather than guessed at, and it is
+	 * cheap: 255 decodes of a 130-byte payload.
+	 */
+	test('a masked payload decodes to exactly what the unmasked one does, for every key', () => {
+		const url = buildInspectUrl(loaded())
+		const expected = readInspectUrl(url)
+
+		for (let key = 1; key < 256; key++) {
+			expect(readInspectUrl(mask(url, key))).toEqual(expected)
+		}
+	})
+
+	/** Key 0 IS the unmasked form, so masking with it must be the identity rather than a special case. */
+	test('key 0 is the ordinary link, untouched', () => {
+		const url = buildInspectUrl(loaded())
+		expect(readInspectUrl(mask(url, 0))).toEqual(readInspectUrl(url))
+	})
+
+	/**
+	 * *** THE CAPTURED PAYLOADS, which is the half a generated one cannot cover. ***
+	 *
+	 * The property test above masks OUR OWN encoder's output, so it would pass even if the wild used a
+	 * different scheme entirely. These three are real links, and their decoded values were checked
+	 * against the published `skins.json` and `stickers.json` rather than eyeballed — see the block
+	 * comment in `src/codec.ts` for the lookups.
+	 */
+	test.each([
+		{
+			name: 'MP9 | Arctic Tri-Tone, one sticker and a charm',
+			hex: 'B6A6795F273770B7AE94967DB49EB286B28E7E1A7958B5F651B7D4A2BEB6A62DF0AB3974C3898BE800C508F3B6EC600CDEF6C6A114B7A1BEB6A6A58BF6C6C589F3F58BFA89FBECB326F6E66D6FB46716C7F2',
+			defindex: 34,
+			paintindex: 331,
+			paintseed: 231,
+			stickers: [8987],
+			charm: 19,
+		},
+		{
+			name: 'AWP | Black Nile, two stickers',
+			hex: 'EEFE0E167C747EEFF6E7CE39E7C6EDDEEAD6327E001AEDAECD8CE1E6ECFE55C0D32EA36E53ABA21667538CFAE6EEFE3DD6C3EEEEAEAED3A7F36A50ABBE9D445386EF9EE65CA43A6A',
+			defindex: 9,
+			paintindex: 1239,
+			paintseed: 35,
+			stickers: [7251, 5947],
+			charm: 0,
+		},
+		{
+			// Sticker | Gaimin Gladiators (Foil) | Cologne 2026 — defindex 1209 is the sticker TOOL
+			// item, so the kit rides the sticker list and there is no weapon here at all.
+			name: 'a lone sticker item',
+			hex: '4353435BFA4A63436B47734721464B4353AD122B4333415A5C67A0',
+			defindex: 1209,
+			paintindex: 0,
+			paintseed: 0,
+			stickers: [10478],
+			charm: 0,
+		},
+	])('$name', ({ hex, defindex, paintindex, paintseed, stickers, charm }) => {
+		const placement = readInspectUrl(`steam://run/730//+csgo_econ_action_preview%20${hex}`)
+
+		expect(placement.defindex).toBe(defindex)
+		expect(placement.paintindex).toBe(paintindex)
+		expect(placement.paintseed).toBe(paintseed)
+		expect(placement.stickers.filter(one => one.sticker_id > 0).map(one => one.sticker_id)).toEqual([...stickers])
+		expect(placement.keychain?.sticker_id ?? 0).toBe(charm)
+	})
+
+	/**
+	 * *** AND THE RETRY MUST NOT TURN GARBAGE INTO AN ITEM. *** The unmask fires only after the reader
+	 * has refused, so the failure mode to guard against is a second, stranger acceptance — and the
+	 * error that comes out has to be the one about the payload the caller actually passed, not about
+	 * the byte string the retry invented.
+	 */
+	test('a payload that is broken either way still throws, with its own error', () => {
+		// Non-zero first byte, so the retry is attempted; nothing decodes under either reading.
+		expect(() => readInspectUrl('AB'.repeat(20))).toThrow()
+	})
+})
+
 /* Three things this file deliberately does NOT test, because they belong elsewhere:
  *
  *   - the **byte format**. `codec.test.ts` runs 2,326 items and 41 URL forms through `src/codec.ts`
