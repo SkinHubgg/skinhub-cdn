@@ -95,6 +95,12 @@ const toInspectSticker = (placement: StickerPlacement): InspectSticker => ({
 	offset_y: placement.offset_y,
 })
 
+/**
+ * `wrapped_sticker` is written ONLY when non-zero, which is what keeps every charm that seals
+ * nothing on a byte-identical link. The codec writes tag 12 for any `number`, `0` included, so
+ * spelling the field out unconditionally would append a pointless `60 00` to every ordinary charm
+ * and change links that have been correct for months.
+ */
 const toInspectKeychain = (placement: KeychainPlacement): InspectSticker => ({
 	slot: placement.slot,
 	sticker_id: placement.sticker_id,
@@ -102,6 +108,7 @@ const toInspectKeychain = (placement: KeychainPlacement): InspectSticker => ({
 	offset_y: placement.offset_y,
 	offset_z: placement.offset_z,
 	pattern: placement.pattern,
+	...(placement.wrapped_sticker ? { wrapped_sticker: placement.wrapped_sticker } : {}),
 })
 
 /**

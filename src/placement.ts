@@ -83,6 +83,16 @@ export type KeychainPlacement = {
 	offset_y: number
 	offset_z: number
 	pattern: number
+	/**
+	 * The sticker sealed inside a `Charm | Sticker Slab` - `optional uint32 wrapped_sticker = 12` of
+	 * the same submessage, and `items_game` attribute 321 `keychain slot 0 sticker` on the econ side.
+	 *
+	 * A sticker kit id, not a charm id; `0` means the slab is empty. It has no wear, scale, rotation
+	 * or offset - one uint32 is the whole field, because the slab draws its sticker at the placement
+	 * its own material authors. `codec.ts` has read and written the field all along; it was this type
+	 * being six fields wide that dropped it in both directions.
+	 */
+	wrapped_sticker: number
 }
 
 /** The five sticker slots a CS2 weapon has. */
@@ -131,6 +141,7 @@ export const DEFAULT_KEYCHAIN: KeychainPlacement = {
 	offset_y: 0,
 	offset_z: 0,
 	pattern: 0,
+	wrapped_sticker: 0,
 }
 
 export const emptySticker = (slot: number): StickerPlacement => ({ ...DEFAULT_STICKER, slot })
@@ -172,6 +183,7 @@ export const makeKeychainPlacement = (placement: Partial<KeychainPlacement>): Ke
 		offset_y: f32(placement.offset_y ?? 0),
 		offset_z: f32(placement.offset_z ?? 0),
 		pattern: u32(placement.pattern ?? 0),
+		wrapped_sticker: u32(placement.wrapped_sticker ?? 0),
 	}
 }
 

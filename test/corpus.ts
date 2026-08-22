@@ -275,6 +275,7 @@ export const buildCorpus = (): CorpusEntry[] => {
 							offset_y: Math.round((random() - 0.5) * 400) / 100,
 							offset_z: Math.round((random() - 0.5) * 400) / 100,
 							pattern: Math.floor(random() * 100000),
+							wrapped_sticker: 0,
 						}
 					: emptyKeychain(),
 		})
@@ -368,14 +369,14 @@ export const buildCorpus = (): CorpusEntry[] => {
 
 	const keychainCases: [string, KeychainPlacement][] = [
 		['absent', emptyKeychain()],
-		['id 1, everything zero', { slot: 0, sticker_id: 1, offset_x: 0, offset_y: 0, offset_z: 0, pattern: 0 }],
+		['id 1, everything zero', { slot: 0, sticker_id: 1, offset_x: 0, offset_y: 0, offset_z: 0, pattern: 0, wrapped_sticker: 0 }],
 		[
 			'pattern at the uint32 ceiling',
-			{ slot: 0, sticker_id: 21, offset_x: 0, offset_y: 0, offset_z: 0, pattern: UINT32_MAX },
+			{ slot: 0, sticker_id: 21, offset_x: 0, offset_y: 0, offset_z: 0, pattern: UINT32_MAX, wrapped_sticker: 0 },
 		],
 		[
 			'negative offsets, which are NOT clamped for a charm',
-			{ slot: 0, sticker_id: 21, offset_x: -12.5, offset_y: -0.001, offset_z: 34.75, pattern: 41 },
+			{ slot: 0, sticker_id: 21, offset_x: -12.5, offset_y: -0.001, offset_z: 34.75, pattern: 41, wrapped_sticker: 0 },
 		],
 		[
 			'the real charm id range, highest id',
@@ -386,6 +387,19 @@ export const buildCorpus = (): CorpusEntry[] => {
 				offset_y: -2.25,
 				offset_z: 0.125,
 				pattern: 7,
+				wrapped_sticker: 0,
+			},
+		],
+		[
+			'a Charm | Sticker Slab that seals a sticker',
+			{
+				slot: 0,
+				sticker_id: seed.keychains[0] ?? 1,
+				offset_x: 0,
+				offset_y: 0,
+				offset_z: 0,
+				pattern: 0,
+				wrapped_sticker: seed.stickers[0] ?? 1,
 			},
 		],
 	]
@@ -445,7 +459,7 @@ export const buildCorpus = (): CorpusEntry[] => {
 						offset_y: 0.5 - slot / 8,
 					}),
 				),
-				keychain: { slot: 0, sticker_id: 21, offset_x: 1.5, offset_y: -2.25, offset_z: 0.125, pattern: 41 },
+				keychain: { slot: 0, sticker_id: 21, offset_x: 1.5, offset_y: -2.25, offset_z: 0.125, pattern: 41, wrapped_sticker: 0 },
 			}),
 		),
 	)

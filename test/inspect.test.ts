@@ -44,7 +44,7 @@ const loaded = (): SkinPlacement => ({
 		makeStickerPlacement({ slot: 3, sticker_id: 1, wear: 1, scale: 2, rotation: 0, offset_x: 0.5, offset_y: -0.5 }),
 		emptySticker(4),
 	],
-	keychain: { slot: 0, sticker_id: 21, offset_x: 1.5, offset_y: -2.25, offset_z: 0.125, pattern: 41 },
+	keychain: { slot: 0, sticker_id: 21, offset_x: 1.5, offset_y: -2.25, offset_z: 0.125, pattern: 41, wrapped_sticker: 0 },
 })
 
 const bare = (): SkinPlacement => ({

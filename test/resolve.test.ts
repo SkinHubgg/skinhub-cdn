@@ -211,7 +211,7 @@ describe('stickers and charms', () => {
 		const dressed = throughALink(named('M4A4 | Howl'), {
 			paintwear: 0.2,
 			stickers: [{ ...emptySticker(2), sticker_id: stickerId, wear: 0.25 }],
-			keychain: { slot: 0, sticker_id: keychainId, offset_x: 0, offset_y: 0, offset_z: 0, pattern: 7 },
+			keychain: { slot: 0, sticker_id: keychainId, offset_x: 0, offset_y: 0, offset_z: 0, pattern: 7, wrapped_sticker: 0 },
 		})
 		expect(hasStickers(dressed)).toBe(true)
 		expect(hasKeychain(dressed)).toBe(true)
@@ -246,7 +246,7 @@ describe('stickers and charms', () => {
 	test('a charm resolves to its row and keeps its seed', () => {
 		const link = throughALink(named('M4A4 | Howl'), {
 			paintwear: 0.2,
-			keychain: { slot: 0, sticker_id: keychainId, offset_x: 1, offset_y: 2, offset_z: 3, pattern: 42 },
+			keychain: { slot: 0, sticker_id: keychainId, offset_x: 1, offset_y: 2, offset_z: 3, pattern: 42, wrapped_sticker: 0 },
 		})
 		const item = resolveItem(link, { skins: fixtureSkins, keychains: fixtureKeychains })
 		expect(item.keychain?.keychainId).toBe(keychainId)
