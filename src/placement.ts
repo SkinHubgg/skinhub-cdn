@@ -2,8 +2,9 @@
  * Sticker and charm placement, stored as the GAME's own fields — and the quantisation guard that
  * has to sit between a caller and any encoder.
  *
- * **This module has no dependencies.** It is a separate entry point (`@skinhub/cdn/placement`)
- * from `@skinhub/cdn/inspect` for that reason: a server that writes WeaponPaints rows needs the
+ * **This module has no external dependencies** - its one import is `./stickerAnchors.js`, a sibling
+ * data file with none of its own. It is a separate entry point (`@skinhub/cdn/placement`) from
+ * `@skinhub/cdn/inspect` for that reason: a server that writes WeaponPaints rows needs the
  * normalisation and the row format but has no use for a protobuf codec, and should not install one.
  *
  * The shape is `CEconItemPreviewDataBlock.Sticker` verbatim — `slot`, `sticker_id`, `wear`,
@@ -13,7 +14,22 @@
  *
  * Ground truth for the offsets: `g_vStickerNOffset` is `Range2(-0.5,-0.5, 0.5,0.5)`, i.e. UV space
  * centred on the slot's anchor. Protobuf offsets map 1:1 and need no conversion at all.
+ *
+ * ONE SLOT IS NOT A SIMPLE CONVERSION: the fifth. See `./stickerAnchors.ts` for why, and for the
+ * table `parseStickerRow`/`formatStickerRow` take an anchor from below.
  */
+
+import { NO_STICKER_ANCHOR, type StickerAnchor } from './stickerAnchors.js'
+
+export {
+	type AnchorCatalogSkin,
+	FIFTH_STICKER_SLOT,
+	NO_STICKER_ANCHOR,
+	type StickerAnchor,
+	STICKER_ANCHORS,
+	stickerAnchorFor,
+	stickerAnchorLookup,
+} from './stickerAnchors.js'
 
 /** Every wire field below is a protobuf `float`, so the canonical value is float32. */
 export const f32 = (value: number) => (Number.isFinite(value) ? Math.fround(value) : 0)
@@ -201,12 +217,24 @@ export const makeSkinPlacement = (placement: SkinPlacement): SkinPlacement => ({
  *
  * Every field is then written straight onto the item as a game attribute, one per column field —
  * and those attributes are exactly what `CEconItemPreviewDataBlock.Sticker` carries in an inspect
- * link. So the column value IS the inspect link's coordinate; there is nothing to convert.
+ * link. So the column's `offset_x`/`offset_y` ARE the inspect link's coordinate for slots 0-3,
+ * with nothing to convert - and for the fifth slot on the 29 weapon+mesh variants an anchor
+ * applies to, converting IS the job: `CEconItemPreviewDataBlock.Sticker` has no field for the
+ * anchor at all, so a caller decoding or encoding slot 4 for one of those variants has to fold the
+ * shift into `offset_x`/`offset_y` on the way past rather than carry it as a sixth number.
  *
- * Two deliberate divergences, both forced by the plugin's column having fewer fields than the
- * protobuf message: a sticker's `offset_z` and `tint_id`/`pattern`/`highlight_reel` have no column
- * and no attribute the plugin sets, so they cannot survive a save; and `schema` is written as 0
- * because `WeaponAction.cs` hardcodes `$"sticker slot {slot} schema", 0` whatever the column says.
+ * ONE DIVERGENCE IS FORCED BY THE PLUGIN'S COLUMN HAVING FEWER FIELDS THAN THE PROTOBUF MESSAGE:
+ * a sticker's `offset_z` and `tint_id`/`pattern`/`highlight_reel` have no column and no attribute
+ * the plugin sets, so they cannot survive a save.
+ *
+ * THE OTHER, `schema`, USED TO BE A SECOND ONE AND IS NOT ANY MORE. `WeaponAction.cs` no longer
+ * hardcodes it to 0 - it reads the column's second field as an ANCHOR, naming which of the weapon's
+ * authored `StickerMarkup` homes the slot hangs off, with 0 still meaning "use the slot's own
+ * index". `./stickerAnchors.ts` is the whole argument for why that matters and the table it is
+ * measured against; `parseStickerRow`/`formatStickerRow` below take one as an optional third and
+ * second argument respectively, exactly as `sticker_id` and `slot` are already explicit rather than
+ * inferred, so a caller with no catalogue to resolve an anchor from keeps today's behaviour for
+ * free.
  *
  * Floats are parsed with `float.TryParse(NumberStyles.Float, CultureInfo.InvariantCulture)`, so
  * the grammar is `[+-]?digits[.digits][eE[+-]digits]` with a `.` separator and no group
@@ -239,14 +267,44 @@ const numbers = (row: string, expected: number): number[] | null => {
 }
 
 /**
- * The plugin's second column is the sticker's schema/tint id. The column is kept but not modelled:
- * carrying it would put a field in the placement object that the inspect protobuf calls something
- * else (`tint_id`).
+ * *** THE DELTA IS QUANTISED TO FLOAT32 ON BOTH SIDES, AND THAT IS WHAT STOPS THE COLUMN FROM
+ * WANDERING. *** `STICKER_ANCHORS`'s numbers are shortest-decimal spellings of float32 values, so
+ * reading one back out of source gives a double that is merely NEAR the float32 the wire holds.
+ * Adding that double on write and subtracting it on read makes `parse -> format` a map that is not
+ * its own fixed point - measured over the real table it took up to nine save/load cycles to settle,
+ * creeping 2.8e-7 uv on the way. Putting both sides on the wire's own grid settles on the first
+ * save, with the read landing 3e-8 uv from where the caller put it.
+ *
+ * Also the guard against a malformed anchor reaching the arithmetic: a shape that is not exactly
+ * `{ anchor, dx, dy }` - a stray array index, a partial object - degrades to "no anchor" rather
+ * than producing `NaN` fields that `numbers()`/`Number.isFinite` would then read as a malformed row.
  */
-export const parseStickerRow = (row: string | null | undefined, slot: number): StickerPlacement => {
+const usableAnchor = (anchor: StickerAnchor | null | undefined): StickerAnchor | null =>
+	anchor && typeof anchor === 'object' && Number.isFinite(anchor.anchor) && Number.isFinite(anchor.dx) && Number.isFinite(anchor.dy)
+		? { anchor: anchor.anchor, dx: f32(anchor.dx), dy: f32(anchor.dy) }
+		: null
+
+/**
+ * The plugin's second column is the sticker's ANCHOR (see the header above and
+ * `./stickerAnchors.ts`) - which of the weapon's authored homes this slot hangs off, 0 meaning "use
+ * the slot's own index". Only the caller knows which weapon and mesh a row belongs to, so it is not
+ * inferred here: pass the anchor `stickerAnchorFor`/`stickerAnchorLookup` resolve for this
+ * `(weaponId, legacy, slot)`, or omit it to get today's behaviour - the column read literally, with
+ * no shift applied.
+ *
+ * *** KEYED ON THE ROW'S OWN FIELD, NOT ON WHETHER THE CALLER HANDED ONE IN. *** A row written
+ * before this table existed carries a 0 and was never shifted; un-shifting it because the weapon
+ * now HAS an anchor would move a sticker nobody touched. So the row's own second field has to be
+ * non-zero, as well as the caller's anchor being usable, before anything is subtracted.
+ */
+export const parseStickerRow = (
+	row: string | null | undefined,
+	slot: number,
+	anchor: StickerAnchor | null = null,
+): StickerPlacement => {
 	const parts = numbers(row ?? STICKER_SCHEMA, 7)
 	if (!parts) return emptySticker(slot)
-	const [sticker_id, , offset_x, offset_y, wear, scale, rotation] = parts as [
+	const [sticker_id, schema, rawX, rawY, wear, scale, rotation] = parts as [
 		number,
 		number,
 		number,
@@ -255,13 +313,31 @@ export const parseStickerRow = (row: string | null | undefined, slot: number): S
 		number,
 		number,
 	]
+	const applied = sticker_id && schema ? usableAnchor(anchor) : null
+	const offset_x = applied ? f32(f32(rawX) - applied.dx) : rawX
+	const offset_y = applied ? f32(f32(rawY) - applied.dy) : rawY
 	return makeStickerPlacement({ slot, sticker_id, offset_x, offset_y, wear, scale, rotation })
 }
 
-export const formatStickerRow = (placement: StickerPlacement) => {
-	const { sticker_id, offset_x, offset_y, wear, scale, rotation } = makeStickerPlacement(placement)
+/**
+ * *** CLAMP THEN SHIFT, NOT THE OTHER WAY ROUND. *** `clampStickerOffset` inside
+ * `makeStickerPlacement` bounds where a caller may PLACE a sticker. The anchor shift is not a
+ * placement - it is a change of coordinate frame, from the home the viewer draws in to the home the
+ * game will use - and several of the table's shifts are larger than that bound on their own (the
+ * Galil's hd shift is 0.363). Re-clamping after applying it would drag the sticker away from the
+ * spot the caller picked, which is the opposite of what the clamp is for.
+ *
+ * An EMPTY slot (`sticker_id === 0`) takes no shift and writes anchor 0, so a column nobody ever
+ * touched stays exactly the string it has always been - `STICKER_SCHEMA` - anchor table or not.
+ */
+export const formatStickerRow = (placement: StickerPlacement, anchor: StickerAnchor | null = null) => {
+	const normalized = makeStickerPlacement(placement)
+	const { sticker_id, wear, scale, rotation } = normalized
+	const applied = sticker_id === 0 ? null : usableAnchor(anchor)
+	const offset_x = f32(normalized.offset_x + (applied?.dx ?? 0))
+	const offset_y = f32(normalized.offset_y + (applied?.dy ?? 0))
 	const f = shortFloat
-	return `${sticker_id};0;${f(offset_x)};${f(offset_y)};${f(wear)};${f(scale)};${f(rotation)}`
+	return `${sticker_id};${applied ? applied.anchor : NO_STICKER_ANCHOR};${f(offset_x)};${f(offset_y)};${f(wear)};${f(scale)};${f(rotation)}`
 }
 
 export const parseKeychainRow = (row: string | null | undefined): KeychainPlacement => {

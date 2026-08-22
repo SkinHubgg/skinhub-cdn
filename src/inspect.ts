@@ -40,6 +40,7 @@ import {
 
 /** Re-exported so `@skinhub/cdn/inspect` is a complete surface on its own. */
 export {
+	type AnchorCatalogSkin,
 	clamp,
 	clampStickerOffset,
 	DEFAULT_KEYCHAIN,
@@ -48,6 +49,7 @@ export {
 	emptyKeychain,
 	emptySticker,
 	f32,
+	FIFTH_STICKER_SLOT,
 	formatKeychainRow,
 	formatStickerRow,
 	KEYCHAIN_SCHEMA,
@@ -56,12 +58,17 @@ export {
 	makeSkinPlacement,
 	makeStickerPlacement,
 	migrateLegacyKeychainRow,
+	NO_STICKER_ANCHOR,
 	normalizedFromOffset,
 	offsetFromNormalized,
 	parseKeychainRow,
 	parseStickerRow,
 	shortFloat,
 	type SkinPlacement,
+	STICKER_ANCHORS,
+	type StickerAnchor,
+	stickerAnchorFor,
+	stickerAnchorLookup,
 	STICKER_OFFSET_MAX,
 	STICKER_OFFSET_MIN,
 	STICKER_SCHEMA,

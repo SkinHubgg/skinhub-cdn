@@ -676,6 +676,29 @@ Floats are written at the shortest decimal that reads back as the same float32 -
 `0.30000001192092896` - because seven of the latter overflow the plugin's `varchar(128)` column and
 the extra digits carry no information.
 
+#### The fifth slot's anchor
+
+The column's second field is not always 0. On 29 of the 69 weapon+mesh variants the model authors
+no fifth `StickerMarkup` home, so the WeaponPaints plugin reads that field as an ANCHOR - which of
+the weapon's other homes slot 4 hangs off - and a caller that never resolves one for those variants
+gets a fifth sticker that saves fine and renders nowhere. `stickerAnchorFor` / `stickerAnchorLookup`
+resolve it; `formatStickerRow` and `parseStickerRow` take it as an extra argument and no-op without
+one, so existing callers are unaffected:
+
+```ts
+import { formatStickerRow, parseStickerRow, stickerAnchorLookup } from '@skinhub/cdn/placement'
+
+const anchorFor = stickerAnchorLookup(skinsCatalogue)              // from fetchSkins(), once
+const anchor = anchorFor(weapon_defindex, weapon_paint_id, slot)   // null for the other 40 variants
+
+formatStickerRow(fifthSlotPlacement, anchor)   // '60;1;0.14699425;0.028994253;0;1;0' on an AK-47
+parseStickerRow(row, 4, anchor)                // -> the placement in the frame the viewer draws in
+```
+
+Only the fifth slot ever resolves to a non-null anchor, and only a row whose own second field is
+already non-zero is un-shifted on read - a row saved before this table existed keeps its 0 and is
+never touched, which is what makes this safe with no migration.
+
 `migrateLegacyKeychainRow(row)` rewrites charm rows written by the pre-2026 schema, which stored
 `id;-x;1;-y;seed` into an `id;x;y;z;seed` column. It returns `null` for rows that are already
 correct, so a migration using it is safe to re-run.
@@ -752,6 +775,9 @@ Types - `SkinCategoryKey` · `WeaponRef` · `WeaponType` · `ResolvedWeapon` · 
 `migrateLegacyKeychainRow` · `offsetFromNormalized` · `normalizedFromOffset` · `f32` · `u32` ·
 `clamp` · `clampStickerOffset` · `shortFloat` · `STICKER_SLOTS` · `SkinPlacement` ·
 `StickerPlacement` · `KeychainPlacement`
+
+The fifth slot's anchor - `STICKER_ANCHORS` · `stickerAnchorFor` · `stickerAnchorLookup` ·
+`FIFTH_STICKER_SLOT` · `NO_STICKER_ANCHOR` · `StickerAnchor` · `AnchorCatalogSkin`
 
 ### `@skinhub/cdn/inspect`
 `buildInspectUrl` · `readInspectUrl` · `toEconItem` · `fromEconItem` · `toGameCommand` ·
