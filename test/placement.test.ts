@@ -82,10 +82,19 @@ describe('makeStickerPlacement', () => {
 		expect(orphan).toEqual(emptySticker(0))
 	})
 
-	test('scale 0 means "default", not "zero-sized"', () => {
-		expect(makeStickerPlacement({ slot: 1, sticker_id: 5, scale: 0 }).scale).toBe(DEFAULT_STICKER_SCALE)
-		expect(makeStickerPlacement({ slot: 1, sticker_id: 5, scale: -3 }).scale).toBe(DEFAULT_STICKER_SCALE)
+	// `g_vStickerNScale` is an INVERSE uv scale authored 4.63..35.0, so neither 0 nor 1 is a legal
+	// size and the field is not read as one. 0 is what the protobuf decodes to when it is absent.
+	test('scale is carried through as given, 0 included', () => {
+		expect(DEFAULT_STICKER_SCALE).toBe(0)
+		expect(makeStickerPlacement({ slot: 1, sticker_id: 5, scale: 0 }).scale).toBe(0)
+		expect(makeStickerPlacement({ slot: 1, sticker_id: 5 }).scale).toBe(DEFAULT_STICKER_SCALE)
 		expect(makeStickerPlacement({ slot: 1, sticker_id: 5, scale: 0.5 }).scale).toBe(0.5)
+		expect(makeStickerPlacement({ slot: 1, sticker_id: 5, scale: 14.1 }).scale).toBeCloseTo(14.1, 5)
+	})
+
+	test('an offset is not bounded - the weapon region is the bound, and it is not a square', () => {
+		expect(makeStickerPlacement({ slot: 1, sticker_id: 5, offset_x: 0.9 }).offset_x).toBeCloseTo(0.9, 6)
+		expect(makeStickerPlacement({ slot: 1, sticker_id: 5, offset_y: -9 }).offset_y).toBe(-9)
 	})
 
 	test('a signed or fractional id cannot get through', () => {

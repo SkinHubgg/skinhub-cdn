@@ -227,25 +227,28 @@ describe('the round trip', () => {
 	})
 })
 
-describe('the clamp and the shift are different things', () => {
+describe('the shift rides on top of whatever the caller placed', () => {
 	const anchor = stickerAnchorFor('weapon_galilar', false, FIFTH_STICKER_SLOT) as StickerAnchor
 
-	test('the shift pushes the stored column outside the range a caller may place in', () => {
-		// 0.363 on top of a placement already allowed to reach 0.5.
+	test('the stored column carries the placement plus the shift', () => {
+		// The Galil's hd shift is 0.363 - larger on its own than the material editor's whole slider
+		// range, which is one of the reasons that range was never a bound worth applying.
 		const stored = Number(formatStickerRow(sticker({ offset_x: STICKER_OFFSET_MAX }), anchor).split(';')[2])
 		expect(stored).toBeGreaterThan(STICKER_OFFSET_MAX)
 		expect(stored).toBeCloseTo(STICKER_OFFSET_MAX + anchor.dx, 6)
 	})
 
 	/**
-	 * The caller's own value is clamped by `makeStickerPlacement` before the shift is added, and the
-	 * shift itself is never re-clamped - re-clamping after it would drag the sticker off the spot
-	 * the caller picked, and on this weapon it would drag it most of the way across the gun.
+	 * Nothing in this package bounds an offset any more, so the read has to hand back exactly what was
+	 * placed - the shift added on write and taken off again on read, and no third party in between.
+	 * The weapon's authored region is the real bound and the viewer applies it before we ever see the
+	 * value; re-bounding here would drag the sticker off the spot the caller picked, and on THIS
+	 * weapon it would drag it most of the way across the gun.
 	 */
-	test('the read gives the clamped placed value back, not a doubly-clamped one', () => {
+	test('the read gives back exactly what was placed, unbounded', () => {
 		const read = parseStickerRow(formatStickerRow(sticker({ offset_x: 9, offset_y: -9 }), anchor), FIFTH_STICKER_SLOT, anchor)
-		expect(read.offset_x).toBeCloseTo(STICKER_OFFSET_MAX, 6)
-		expect(read.offset_y).toBeCloseTo(-STICKER_OFFSET_MAX, 6)
+		expect(read.offset_x).toBeCloseTo(9, 5)
+		expect(read.offset_y).toBeCloseTo(-9, 5)
 	})
 })
 
@@ -253,7 +256,7 @@ describe('a malformed anchor degrades to no anchor', () => {
 	test('a stray array index does not corrupt the row', () => {
 		for (const strayIndex of [0, 1, 2, 3, 4]) {
 			const row = formatStickerRow(sticker({ offset_x: 0.1 }), strayIndex as unknown as StickerAnchor)
-			expect(row).toBe(`60;${NO_STICKER_ANCHOR};0.1;0;0;1;0`)
+			expect(row).toBe(`60;${NO_STICKER_ANCHOR};0.1;0;0;0;0`)
 			expect(pluginReads(row, strayIndex)).not.toBeNull()
 		}
 		expect(parseStickerRow('60;1;0.2;0.1;0;0;0', FIFTH_STICKER_SLOT, 3 as unknown as StickerAnchor)).toEqual(

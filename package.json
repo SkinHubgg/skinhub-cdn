@@ -1,6 +1,6 @@
 {
 	"name": "@skinhub/cdn",
-	"version": "0.2.3",
+	"version": "0.3.0",
 	"description": "Typed data layer over the SkinHub CS2 CDN — skins, stickers, gloves, agents, music kits, keychains, collectibles and items_game, fetched at runtime with pluggable caching. Plus the CS2 inspect-link codec.",
 	"type": "module",
 	"main": "dist/index.js",

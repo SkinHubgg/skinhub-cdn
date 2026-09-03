@@ -154,7 +154,10 @@ describe('toEconItem', () => {
 		expect(Number.isInteger(item.stickers?.[0]?.sticker_id)).toBe(true)
 	})
 
-	test('offsets outside the shader range are clamped on the way out', () => {
+	// `Range2(-0.5,-0.5, 0.5,0.5)` is the material editor's slider range, not a limit CS2 enforces, and
+	// the real bound is the weapon's authored region - which the viewer applies, and which is not a
+	// square. See `clampStickerOffset` in `../src/placement.ts`.
+	test('an offset outside the material editor range is carried, not clamped', () => {
 		const item = toEconItem({
 			...bare(),
 			stickers: [
@@ -162,8 +165,20 @@ describe('toEconItem', () => {
 				...STICKER_SLOTS.slice(1).map(emptySticker),
 			],
 		})
-		expect(item.stickers?.[0]?.offset_x).toBe(0.5)
-		expect(item.stickers?.[0]?.offset_y).toBe(-0.5)
+		expect(item.stickers?.[0]?.offset_x).toBe(9)
+		expect(item.stickers?.[0]?.offset_y).toBe(-9)
+	})
+
+	// 0 means "no size chosen", and the codec refuses `scale <= 0` when the field is PRESENT.
+	test('a non-positive scale is omitted from the item rather than sent', () => {
+		const item = toEconItem({
+			...bare(),
+			stickers: [
+				{ slot: 0, sticker_id: 4, wear: 0, scale: 0, rotation: 0, offset_x: 0, offset_y: 0 },
+				...STICKER_SLOTS.slice(1).map(emptySticker),
+			],
+		})
+		expect(item.stickers?.[0]).not.toHaveProperty('scale')
 	})
 })
 

@@ -51,15 +51,41 @@ export const UINT32_MAX = 4294967295
 
 export const u32 = (value: number) => (Number.isFinite(value) ? clamp(Math.trunc(value), 0, UINT32_MAX) : 0)
 
+/**
+ * *** THIS IS NOT APPLIED ANY MORE, AND NOTHING IN THIS PACKAGE BOUNDS AN OFFSET. ***
+ *
+ * `Range2(-0.5,-0.5, 0.5,0.5)` in the `.vfx` is a MATERIAL EDITOR SLIDER RANGE, not a limit CS2
+ * enforces, and reading an authoring boundary as a renderer boundary is what this used to do.
+ * Nothing downstream agrees with it: the protobuf field is a plain `float`, `WeaponAction.cs` writes
+ * the column straight onto `sticker slot N offset x` with no range check, and the pixel shader's only
+ * coverage test is a 0..1 box on the STICKER's own uv AFTER the transform, which has no opinion about
+ * how large the offset was.
+ *
+ * THE REAL BOUND ALREADY EXISTS, IN THE RIGHT PLACE. SkinHub's viewer clamps a drag to the weapon's
+ * authored `StickerMarkup` region polygon (`clampOffsetToRegion`), which is per-weapon shaped rather
+ * than a square, and slides along its edge. Applying a second square bound on top could only ever
+ * override the correct one.
+ *
+ * WHAT IT COST, measured over the 316 authored slots in the viewer's own markup export: 160 of them
+ * (50.6%, across 30 weapons) have legal region that the ±0.5 box cuts into, losing 15.1% of that
+ * slot's placeable area on average. The Nova's first hd slot legally reaches 0.901 uv, nearly double
+ * the bound. And because the frame bounds by region and this bounded again afterwards, a drag into
+ * that area was silently discarded while the frame kept drawing it - the editor showed one place and
+ * the row stored another.
+ *
+ * Kept exported because the numbers are real - they are what the material editor offers an artist -
+ * and a caller who wants that bound can still ask for it. This package will not apply it for them.
+ */
 export const clampStickerOffset = (value: number) =>
 	f32(clamp(Number.isFinite(value) ? value : 0, STICKER_OFFSET_MIN, STICKER_OFFSET_MAX))
 
 /**
  * A point on the weapon in [0..1] surface coordinates → the game's centred offset, and back.
- * The ranges line up, so this is a recentre and nothing more.
+ * The ranges line up, so this is a recentre and nothing more. Neither direction bounds the result:
+ * a point outside the unit square is a real placement (see `clampStickerOffset` above).
  */
-export const offsetFromNormalized = (normalized: number) => clampStickerOffset(normalized - 0.5)
-export const normalizedFromOffset = (offset: number) => clamp(clampStickerOffset(offset) + 0.5, 0, 1)
+export const offsetFromNormalized = (normalized: number) => f32(normalized - 0.5)
+export const normalizedFromOffset = (offset: number) => f32(offset) + 0.5
 
 /** A sticker slot, in the game's own field names. `sticker_id === 0` means the slot is empty. */
 export type StickerPlacement = {
@@ -119,10 +145,24 @@ export type SkinPlacement = {
 }
 
 /**
- * The game treats an unset scale as 1 (identity), and encoders reject `scale <= 0` outright. The
- * WeaponPaints row default of `0` therefore means "default", not "zero-sized".
+ * *** 0 IS THE DEFAULT, AND IT IS NOT A ZERO SIZE. ***
+ *
+ * This used to be 1, on the reading that "the game treats an unset scale as 1 (identity)". The game's
+ * own files say otherwise: the field lands in `g_vStickerNScale`, an INVERSE uv scale whose authored
+ * values across CS2's 70 weapon materials run 4.63 (the taser) to 35.0 (the Nova), declared
+ * `m_flMax = 64`. So neither 0 nor 1 is a legal sticker SIZE - 1 would be a sticker spanning the whole
+ * sticker-uv island, five to thirty-five times too large.
+ *
+ * Which means the column is not read as a size at all: rows stored with 1 do not draw island-sized
+ * stickers and rows stored with 0 do not vanish. 0 is the value that means "no scale chosen" - what
+ * `CEconItemPreviewDataBlock.Sticker.scale` decodes to when the field is ABSENT, which is every item
+ * CS2's own sticker UI has ever made (that UI offers position, rotation and scrape, never a size).
+ *
+ * The one thing that did argue for 1 was link building, because the codec rejects `scale <= 0`. The
+ * right answer there is to omit an optional field rather than invent a value for it, and `./inspect.ts`
+ * does exactly that now.
  */
-export const DEFAULT_STICKER_SCALE = 1
+export const DEFAULT_STICKER_SCALE = 0
 
 export const DEFAULT_STICKER: StickerPlacement = {
 	slot: 0,
@@ -165,10 +205,12 @@ export const makeStickerPlacement = (placement: Partial<StickerPlacement> & { sl
 		slot,
 		sticker_id,
 		wear: f32(clamp(placement.wear ?? 0, 0, 1)),
-		scale: f32(placement.scale && placement.scale > 0 ? placement.scale : DEFAULT_STICKER_SCALE),
+		// Carried through as given, 0 included - see DEFAULT_STICKER_SCALE. Wear IS bounded, because
+		// `g_flStickerNWear` is a plain 0..1 and the shader's own slider declares that range.
+		scale: f32(placement.scale ?? DEFAULT_STICKER_SCALE),
 		rotation: f32(placement.rotation ?? 0),
-		offset_x: clampStickerOffset(placement.offset_x ?? 0),
-		offset_y: clampStickerOffset(placement.offset_y ?? 0),
+		offset_x: f32(placement.offset_x ?? 0),
+		offset_y: f32(placement.offset_y ?? 0),
 	}
 }
 

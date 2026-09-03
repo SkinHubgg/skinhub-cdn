@@ -85,15 +85,28 @@ export type { EconItem } from './codec.js'
 /** Empty slots carry no data, and the game omits them entirely rather than sending `sticker_id 0`. */
 const isPlaced = (placement: { sticker_id: number }) => placement.sticker_id > 0
 
-const toInspectSticker = (placement: StickerPlacement): InspectSticker => ({
-	slot: placement.slot,
-	sticker_id: placement.sticker_id,
-	wear: placement.wear,
-	scale: placement.scale,
-	rotation: placement.rotation,
-	offset_x: placement.offset_x,
-	offset_y: placement.offset_y,
-})
+/**
+ * *** `scale` IS OMITTED WHEN IT IS NOT POSITIVE, AND OMITTING IS THE CORRECT ENCODING. ***
+ *
+ * A placement's default scale is 0, which means "no size chosen" rather than "zero-sized" (see
+ * `DEFAULT_STICKER_SCALE` in `./placement.ts`). The codec refuses `scale <= 0` - `validate` in
+ * `./codec.ts` answers "scale must be a positive number" - but only when the field is PRESENT, and
+ * an absent `scale` is exactly what `CEconItemPreviewDataBlock.Sticker` carries for every item CS2's
+ * own sticker UI has ever made. So the field is dropped rather than substituted, which is what makes
+ * a placement with no chosen size round-trip through a link as the same placement.
+ */
+const toInspectSticker = (placement: StickerPlacement): InspectSticker => {
+	const sticker: InspectSticker = {
+		slot: placement.slot,
+		sticker_id: placement.sticker_id,
+		wear: placement.wear,
+		rotation: placement.rotation,
+		offset_x: placement.offset_x,
+		offset_y: placement.offset_y,
+	}
+	if (placement.scale > 0) sticker.scale = placement.scale
+	return sticker
+}
 
 /**
  * `wrapped_sticker` is written ONLY when non-zero, which is what keeps every charm that seals
