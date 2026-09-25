@@ -25,6 +25,11 @@
  *
  * The one part of the query work that *does* fetch, `loadSkinIndex`, lives in `@skinhub/cdn/catalog`
  * and is re-exported here too — it is `fetchSkins` plus an index, so it belongs with the fetchers.
+ *
+ * **CS2 1.41.8.2 (2026-09-22)** added two things this package now covers: chicken pets
+ * (`@skinhub/cdn/pets` - `data/pets.json`, `data/petVariants.json`, and the `wp_player_pets` row
+ * codec, which `@skinhub/cdn/placement` also carries) and stickers on the C4, which the export
+ * carries as one vanilla row from that update on and which `./c4.ts` also has as constants.
  */
 
 export {
@@ -62,6 +67,33 @@ export {
 export { fetchKeychains, KEYCHAINS_FILE, type Keychain, type Keychains } from './datasets/keychains.js'
 export { fetchMusicKits, MUSIC_FILE, type MusicKit, type MusicKits } from './datasets/music.js'
 export {
+	CHICKEN_EGG_DEFINDEX,
+	CHICKEN_FEED_DEFINDEX,
+	fetchPets,
+	fetchPetVariants,
+	findPet,
+	isPetStage,
+	LOADOUT_SLOT_PET,
+	PET_ITEM_DEFINDEX,
+	PET_STAGES,
+	PET_VARIANTS_FILE,
+	type PetBoneRange,
+	type PetBreed,
+	type PetKind,
+	petKindForStage,
+	petLevelForStage,
+	type PetMaterial,
+	type PetMaterialGroup,
+	type PetModelVariants,
+	petModelVariants,
+	type PetRow,
+	PETS_FILE,
+	type PetsJson,
+	type PetStage,
+	petStageForLevel,
+	type PetVariantsJson,
+} from './datasets/pets.js'
+export {
 	fetchSkins,
 	SKINS_FILE,
 	type Skin,
@@ -98,9 +130,16 @@ export {
 export * from './query/index.js'
 export {
 	type AnchorCatalogSkin,
+	C4_DEFINDEX,
+	C4_NAME,
+	C4_PAINT_INDEX,
+	C4_STICKER_SLOTS,
+	C4_WEAPON,
+	C4_WEAPON_ID,
 	clamp,
 	clampStickerOffset,
 	DEFAULT_KEYCHAIN,
+	DEFAULT_PET_STAGE,
 	DEFAULT_STICKER,
 	DEFAULT_STICKER_SCALE,
 	emptyKeychain,
@@ -108,7 +147,9 @@ export {
 	f32,
 	FIFTH_STICKER_SLOT,
 	formatKeychainRow,
+	formatPetRow,
 	formatStickerRow,
+	isC4,
 	KEYCHAIN_SCHEMA,
 	type KeychainPlacement,
 	makeKeychainPlacement,
@@ -117,9 +158,15 @@ export {
 	migrateLegacyKeychainRow,
 	NO_STICKER_ANCHOR,
 	normalizedFromOffset,
+	normalizePetName,
 	offsetFromNormalized,
 	parseKeychainRow,
+	parsePetRow,
 	parseStickerRow,
+	PET_NAME_MAX_LENGTH,
+	PET_ROW_COLUMNS,
+	type PetSelection,
+	type PetSelectionInput,
 	shortFloat,
 	type SkinPlacement,
 	STICKER_ANCHORS,
@@ -132,6 +179,9 @@ export {
 	STICKER_SLOTS,
 	type StickerPlacement,
 	type StickerSlot,
+	stickerSlotsFor,
 	u32,
 	UINT32_MAX,
+	type WeaponPaintsPetRow,
+	WP_PETS_TABLE,
 } from './placement.js'

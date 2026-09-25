@@ -9,7 +9,7 @@
 
 import type { DatasetOptions } from '../fetch.js'
 import { fetchCdnData } from '../fetch.js'
-import type { ImageUrl, RarityToken } from './common.js'
+import type { IconColor, ImageUrl, RarityToken } from './common.js'
 
 /** From `used_by_classes`, the only place the side is actually stored. */
 export const AGENT_TEAM_T = 2
@@ -32,6 +32,8 @@ export type Agent = {
 	id: string | null
 	rarity: RarityToken | null
 	description: string | null
+	/** `#rrggbb` of `image`, or `null` when there is none - see `IconColor`. */
+	color: IconColor
 }
 
 export type Agents = Agent[]

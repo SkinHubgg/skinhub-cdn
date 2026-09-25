@@ -9,7 +9,7 @@
 
 import type { DatasetOptions } from '../fetch.js'
 import { fetchCdnData } from '../fetch.js'
-import type { ImageUrl, RarityToken } from './common.js'
+import type { IconColor, ImageUrl, RarityToken } from './common.js'
 
 export type Sticker = {
 	/** A decimal string, `'1'`. Unique across the file. */
@@ -19,6 +19,8 @@ export type Sticker = {
 	image: ImageUrl
 	rarity: RarityToken | null
 	description: string | null
+	/** `#rrggbb` of `image`, or `null` when there is none - see `IconColor`. */
+	color: IconColor
 	/** `dreamhack/dh_gologo1` — the sticker material, which is also its CDN path segment. */
 	material: string
 	/** 112 of the kits in `sticker_kits` are patches, not stickers. */

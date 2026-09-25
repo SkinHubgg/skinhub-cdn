@@ -30,6 +30,8 @@
  * ```
  */
 
+/** The C4 as constants, for a `skins.json` older than 1.41.8.2 that has no row for it - see `../c4.ts`. */
+export { C4_DEFINDEX, C4_NAME, C4_STICKER_SLOTS, C4_WEAPON, C4_WEAPON_ID, isC4, stickerSlotsFor } from '../c4.js'
 export {
 	createSkinIndex,
 	type MarketEntry,

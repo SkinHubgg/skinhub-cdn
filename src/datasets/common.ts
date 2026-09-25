@@ -32,3 +32,14 @@ export type RarityToken = Open<
  * icons. Check for it before putting the value in an `<img src>`.
  */
 export type ImageUrl = Open<''>
+
+/**
+ * `#rrggbb` measured off the row's own `image`, or `null` when the row has no icon.
+ *
+ * Added by the exporter after 0.3.0 on five lists - skins, stickers, collectibles, keychains and
+ * agents (not music or gloves) - and it shares the icon's existence check, so a row with
+ * `image: ''` always has `color: null` and never the other way round. Measured on the current
+ * export: `null` on 190 collectibles, 1 keychain and the 2 default agents; set on every skin and
+ * sticker. Good for a swatch or a placeholder tint behind a loading image, not a rarity colour.
+ */
+export type IconColor = string | null

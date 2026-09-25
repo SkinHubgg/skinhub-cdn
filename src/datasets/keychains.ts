@@ -8,7 +8,7 @@
 
 import type { DatasetOptions } from '../fetch.js'
 import { fetchCdnData } from '../fetch.js'
-import type { ImageUrl, RarityToken } from './common.js'
+import type { IconColor, ImageUrl, RarityToken } from './common.js'
 
 export type Keychain = {
 	/** A decimal string, `'1'`. Unique across the file. This is the charm's `sticker_id`. */
@@ -18,6 +18,8 @@ export type Keychain = {
 	image: ImageUrl
 	rarity: RarityToken | null
 	description: string | null
+	/** `#rrggbb` of `image`, or `null` when there is none - see `IconColor`. */
+	color: IconColor
 }
 
 export type Keychains = Keychain[]

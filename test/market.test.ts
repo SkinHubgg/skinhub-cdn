@@ -18,6 +18,7 @@ import { describe, expect, test } from 'bun:test'
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { C4_DEFINDEX } from '../src/c4.js'
 import type { Skin, Skins } from '../src/datasets/skins.js'
 import {
 	canBeSouvenir,
@@ -304,7 +305,9 @@ describe.skipIf(!hasFull)('market hash names over the whole export', () => {
 
 	test('the untradable rows are exactly the vanilla guns', () => {
 		const untradable = skins.filter(isUntradable)
-		expect(untradable.length).toBe(35)
+		// 35, plus the C4's vanilla row on an export from CS2 1.41.8.2 on - see `src/c4.ts`.
+		const c4 = skins.filter(skin => skin.weapon.weapon_id === C4_DEFINDEX).length
+		expect(untradable.length).toBe(35 + c4)
 		for (const skin of untradable) {
 			expect(skin.paint_index).toBe('0')
 			expect(marketHashNames(skin)).toEqual([])

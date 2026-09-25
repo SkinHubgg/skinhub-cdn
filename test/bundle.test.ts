@@ -79,6 +79,7 @@ const DATASETS: Record<string, [fn: string, json: string]> = {
 	keychains: ['fetchKeychains', 'keychains.json'],
 	collectibles: ['fetchCollectibles', 'collectibles.json'],
 	'items-game': ['fetchItemsGame', 'items_game.json'],
+	pets: ['fetchPets', 'pets.json'],
 }
 
 const CASES: Case[] = [
@@ -87,6 +88,7 @@ const CASES: Case[] = [
 	{ name: 'barrel-one-dataset', module: 'index.js', importLine: uses('fetchGloves'), target: 'browser' },
 	{ name: 'barrel-inspect', module: 'index.js', importLine: uses('buildInspectUrl'), target: 'browser' },
 	{ name: 'placement', module: 'placement.js', importLine: uses('formatStickerRow'), target: 'browser' },
+	{ name: 'placement-pets', module: 'placement.js', importLine: uses('formatPetRow'), target: 'browser' },
 	{ name: 'query', module: 'query/index.js', importLine: uses('listKnifeTypes'), target: 'browser' },
 	{ name: 'query-all', module: 'query/index.js', importLine: usesAll, target: 'browser' },
 	{ name: 'query-resolve', module: 'query/index.js', importLine: uses('resolveItem'), target: 'browser' },
@@ -215,6 +217,17 @@ describe('the barrel still shakes', () => {
 		expect(code).not.toContain('csgo_econ_action_preview')
 		expect(code).not.toContain('createInspectUrl')
 		expect(code.length).toBeLessThan(12_000)
+		// The pet row codec rides the same entry point and must shake off a sticker-only consumer.
+		expect(code).not.toContain('wp_player_pets')
+	})
+
+	test('the pet row codec from /placement is small and fetches nothing', () => {
+		const code = codeOf('placement-pets')
+		expect(code).toContain('pet_seed')
+		expect(code).not.toContain('pets.json')
+		expect(code).not.toContain('cdn.skinhub.gg')
+		expect(code).not.toContain('csgo_econ_action_preview')
+		expect(code.length).toBeLessThan(6_000)
 	})
 })
 

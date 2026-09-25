@@ -1,0 +1,664 @@
+{
+	"generatedFrom": "dump-pet-variants.ts from pak01_dir.vpk, CS2 PatchVersion 1.41.8.2 (ClientVersion 2000914) - trimmed for the test fixture",
+	"notes": {
+		"shapes": "Additive deltas, not absolute poses: bones a characteristic leaves alone are identity in both of its clips, so they are omitted, and only the channels that differ between min and max are listed. Apply after the animation mixer, per characteristic value v in 0..1: position += lerp(tMin, tMax, v); quaternion = quaternion * slerp(rMin, rMax, v) (post-multiply); scale *= lerp(sMin, sMax, v). Translations are metres in the bone parent space, the same space as the GLB node translations. Quaternions are [x, y, z, w], signed so rMin.w >= 0 and dot(rMin, rMax) >= 0. Bone names are the GLB node names. On the shipped data every rotation delta sits on an *_ENV helper whose bind and animated rotation are identity, and every scaled bone has unit scale in the idle clips, so only the translation composition (neck_2, head, wing_2_*, the *_ENV offsets) actually interacts with the animation.",
+		"presets": "The ranges each characteristic is rolled in per life stage, [min, max] in 0..1. The presets name a 'comb' that no characteristic is called (those are comb_front and comb_back); how the game maps it is not in the data.",
+		"matgrpWeights": "chicken_metadata.matgrps, only the entries that carry a freq. Groups listed without one (and groups not listed) are omitted: their weight is unknown, treat it as 0 for rolls. Group indices are material group indices, the same as materialGroups[].index.",
+		"seedExpressions": "Normalised VfxEval source (vfxeval.ts), identical in meaning to VRF master's decompile: every binary operation, conditional and &&/|| is bracketed; comparisons give 0 or 1; a && b is a ? b : 0 and a || b is a ? 1 : b; % is float modulo; float2() builds a vector and arithmetic is per component; lines are joined by a space. Keys naming a texture slot (g_t*) come from m_dynamicTextureParams; the engine's use of their value is not known.",
+		"features": "Raw F_* ints from the vmat. F_DETAIL_TEXTURE: absent or 0 = Multiply, 1 = Replace (csgo_character features VCS).",
+		"textures": "CDN paths. Textures under materials/models/ ship in the pettex root; materials/default/* are the shared engine defaults the defaults job already publishes, so they point there."
+	},
+	"models": {
+		"chicken_polish": {
+			"model": "models/chicken/chicken_polish.vmdl",
+			"materialGroups": [
+				{
+					"index": 0,
+					"name": "default",
+					"label": "Brown",
+					"vmat": "materials/models/chicken/chicken_polish_brown.vmat",
+					"shader": "csgo_character.vfx",
+					"features": {
+						"F_ANISOTROPIC_GLOSS": 1,
+						"F_ENABLE_ADJUSTMENTS": 1,
+						"F_SPHERICAL_PROJECTED_ANISOTROPIC_TANGENTS": 1,
+						"F_TINT_MASK": 1
+					},
+					"textures": {
+						"g_tAmbientOcclusion": "pettex/materials/models/chicken/chicken_polish_ao_psd_ec5e19c4.png",
+						"g_tAnisoGloss": "pettex/materials/models/chicken/chicken_polish_normal_psd_be930d53.png",
+						"g_tColor": "pettex/materials/models/chicken/chicken_polish_brown_color_psd_1fbf6413.png",
+						"g_tDetail": "pettex/materials/models/chicken/chicken_polish_face_detail_psd_8eb4c7a5.png",
+						"g_tMetalness": "defaults/materials/default/default_metal_tga_dbfb4d6e.png",
+						"g_tNormal": "pettex/materials/models/chicken/chicken_polish_normal_psd_6109d04.png",
+						"g_tTintMask": "pettex/materials/models/chicken/chicken_polish_brown_tint_mask_psd_945fed9a.png"
+					},
+					"params": {
+						"g_bFogEnabled": 1,
+						"g_bMaskRoughnessAdjustmentsByTintMask": 1,
+						"g_nMaskDetailTextureByTintMask": 2,
+						"g_nScaleTexCoordUByModelScaleAxis": 0,
+						"g_nScaleTexCoordVByModelScaleAxis": 0,
+						"g_nTextureAddressModeU": 0,
+						"g_nTextureAddressModeV": 0,
+						"g_fBrightness": 1,
+						"g_fContrast": 1,
+						"g_fDetailBlendFactor": 1,
+						"g_fDetailBrightness": 1,
+						"g_fDetailContrast": 1,
+						"g_fDetailHueShift": 0,
+						"g_fDetailSaturation": 1,
+						"g_fHueShift": 0,
+						"g_flAmbientOcclusionMasking": 0.4,
+						"g_flDetailTexCoordRotation": 0,
+						"g_flModelTintAmount": 1,
+						"g_flTexCoordRotation": 0,
+						"g_fSaturation": 1,
+						"g_fTextureRoughnessBrightness": 1,
+						"g_fTextureRoughnessContrast": 1,
+						"g_vSphericalAnisotropyAngle": 0,
+						"g_vColorTint": [
+							1,
+							1,
+							1,
+							0
+						],
+						"g_vDetailTexCoordOffset": [
+							-0.375,
+							-0.375,
+							0,
+							0
+						],
+						"g_vDetailTexCoordScale": [
+							0.25,
+							0.25,
+							0,
+							0
+						],
+						"g_vSphericalAnisotropyPole": [
+							-0.022,
+							0,
+							-0.311,
+							0
+						],
+						"g_vTexCoordCenter": [
+							0.5,
+							0.5,
+							0,
+							0
+						],
+						"g_vTexCoordOffset": [
+							0,
+							0,
+							0,
+							0
+						],
+						"g_vTexCoordScale": [
+							1,
+							1,
+							0,
+							0
+						],
+						"g_vTexCoordScrollSpeed": [
+							0,
+							0,
+							0,
+							0
+						]
+					},
+					"seedExpressions": {
+						"g_fBrightness": "return lerp(0.7, 1.1, pow($ChickenBrightness, 4));",
+						"g_fContrast": "return lerp(0.95, 1.4, pow($ChickenContrast, 0.5));",
+						"g_fDetailHueShift": "return lerp(-16, 16, $ChickenDetailHue);",
+						"g_fHueShift": "return lerp(-5, 55, frac(($ChickenHue * 0.5)));",
+						"g_fSaturation": "return (lerp(0.4, lerp(1, 0.75, abs((($ChickenHue * 2) - 1))), pow($ChickenSaturation, 0.25)) * (0.7 + (smoothstep(0, 0.4, $ChickenHue) * 0.3)));",
+						"g_vDetailTexCoordOffset": "v0 = frac($ChickenUVOffset); v1 = ((v0 * 8) - frac((v0 * 8))); v2 = ((v0 * 2) - frac((v0 * 2))); return (float2(-0.375, -0.375) + float2((0.25 * v1), (0.25 * v2)));"
+					},
+					"renderAttributesUsed": [
+						"$ChickenBrightness",
+						"$ChickenContrast",
+						"$ChickenHue",
+						"$ChickenSaturation",
+						"$ChickenDetailHue",
+						"$ChickenUVOffset"
+					]
+				},
+				{
+					"index": 1,
+					"name": "1",
+					"label": "Black With White Head",
+					"vmat": "materials/models/chicken/chicken_polish_black_with_white_head.vmat",
+					"shader": "csgo_character.vfx",
+					"features": {
+						"F_ANISOTROPIC_GLOSS": 1,
+						"F_ENABLE_ADJUSTMENTS": 1,
+						"F_IRIDESCENCE": 1,
+						"F_SPHERICAL_PROJECTED_ANISOTROPIC_TANGENTS": 1,
+						"F_TINT_MASK": 1
+					},
+					"textures": {
+						"g_tAmbientOcclusion": "pettex/materials/models/chicken/chicken_polish_ao_psd_ec5e19c4.png",
+						"g_tAnisoGloss": "pettex/materials/models/chicken/chicken_polish_normal_psd_be930d53.png",
+						"g_tColor": "pettex/materials/models/chicken/chicken_polish_black_with_white_head_color_psd_70861845.png",
+						"g_tDetail": "pettex/materials/models/chicken/chicken_polish_face_detail_psd_8eb4c7a5.png",
+						"g_tIridescentThickness_Mask": "pettex/materials/models/chicken/chicken_polish_iridescence_psd_11c59da3.png",
+						"g_tMetalness": "defaults/materials/default/default_metal_tga_dbfb4d6e.png",
+						"g_tNormal": "pettex/materials/models/chicken/chicken_polish_normal_psd_6109d04.png",
+						"g_tTintMask": "pettex/materials/models/chicken/chicken_polish_brown_tint_mask_psd_945fed9a.png"
+					},
+					"params": {
+						"g_bFogEnabled": 1,
+						"g_bMaskRoughnessAdjustmentsByTintMask": 0,
+						"g_nMaskDetailTextureByTintMask": 0,
+						"g_nScaleTexCoordUByModelScaleAxis": 0,
+						"g_nScaleTexCoordVByModelScaleAxis": 0,
+						"g_nTextureAddressModeU": 0,
+						"g_nTextureAddressModeV": 0,
+						"g_fBrightness": 1,
+						"g_fContrast": 1,
+						"g_fDetailBlendFactor": 1,
+						"g_fDetailBrightness": 1,
+						"g_fDetailContrast": 1,
+						"g_fDetailHueShift": 0,
+						"g_fDetailSaturation": 1,
+						"g_fHueShift": 0,
+						"g_flAmbientOcclusionMasking": 0.4,
+						"g_flDetailTexCoordRotation": 0,
+						"g_flIridescentFresnelStrength": 0.432,
+						"g_flIridescentHueShift": 1,
+						"g_flIridescentStrength": 2,
+						"g_flModelTintAmount": 1,
+						"g_flTexCoordRotation": 0,
+						"g_fSaturation": 1,
+						"g_fTextureRoughnessBrightness": 1,
+						"g_fTextureRoughnessContrast": 1,
+						"g_vSphericalAnisotropyAngle": 0,
+						"g_vColorTint": [
+							1,
+							1,
+							1,
+							0
+						],
+						"g_vDetailTexCoordOffset": [
+							-0.375,
+							-0.375,
+							0,
+							0
+						],
+						"g_vDetailTexCoordScale": [
+							0.25,
+							0.25,
+							0,
+							0
+						],
+						"g_vSphericalAnisotropyPole": [
+							-0.022,
+							0,
+							-0.311,
+							0
+						],
+						"g_vTexCoordCenter": [
+							0.5,
+							0.5,
+							0,
+							0
+						],
+						"g_vTexCoordOffset": [
+							0,
+							0,
+							0,
+							0
+						],
+						"g_vTexCoordScale": [
+							1,
+							1,
+							0,
+							0
+						],
+						"g_vTexCoordScrollSpeed": [
+							0,
+							0,
+							0,
+							0
+						],
+						"TextureIridescentThickness": [
+							0,
+							0,
+							0,
+							0
+						]
+					},
+					"seedExpressions": {
+						"g_fBrightness": "return lerp(0.45, 1, $ChickenBrightness);",
+						"g_fContrast": "return lerp(0.9, 1, $ChickenBrightness);",
+						"g_fDetailHueShift": "return lerp(-16, 16, $ChickenDetailHue);",
+						"g_fHueShift": "return (($ChickenDetailHue < 0.5) ? lerp(-16, 16, ($ChickenDetailHue * 2)) : lerp(180, 220, (($ChickenDetailHue * 2) - 1)));",
+						"g_flIridescentHueShift": "return lerp(0.6, 1, $ChickenHue);",
+						"g_flIridescentStrength": "return lerp(0, 0.9, $ChickenIridescence);",
+						"g_fSaturation": "return lerp(0, 6, $ChickenSaturation);",
+						"g_vDetailTexCoordOffset": "v0 = frac($ChickenUVOffset); v1 = ((v0 * 8) - frac((v0 * 8))); v2 = ((v0 * 2) - frac((v0 * 2))); return (float2(-0.375, -0.375) + float2((0.25 * v1), (0.25 * v2)));"
+					},
+					"renderAttributesUsed": [
+						"$ChickenBrightness",
+						"$ChickenDetailHue",
+						"$ChickenSaturation",
+						"$ChickenUVOffset",
+						"$ChickenHue",
+						"$ChickenIridescence"
+					]
+				},
+				{
+					"index": 2,
+					"name": "2",
+					"label": "Brown",
+					"vmat": "materials/models/chicken/chicken_polish_brown.vmat",
+					"shader": "csgo_character.vfx",
+					"features": {
+						"F_ANISOTROPIC_GLOSS": 1,
+						"F_ENABLE_ADJUSTMENTS": 1,
+						"F_SPHERICAL_PROJECTED_ANISOTROPIC_TANGENTS": 1,
+						"F_TINT_MASK": 1
+					},
+					"textures": {
+						"g_tAmbientOcclusion": "pettex/materials/models/chicken/chicken_polish_ao_psd_ec5e19c4.png",
+						"g_tAnisoGloss": "pettex/materials/models/chicken/chicken_polish_normal_psd_be930d53.png",
+						"g_tColor": "pettex/materials/models/chicken/chicken_polish_brown_color_psd_1fbf6413.png",
+						"g_tDetail": "pettex/materials/models/chicken/chicken_polish_face_detail_psd_8eb4c7a5.png",
+						"g_tMetalness": "defaults/materials/default/default_metal_tga_dbfb4d6e.png",
+						"g_tNormal": "pettex/materials/models/chicken/chicken_polish_normal_psd_6109d04.png",
+						"g_tTintMask": "pettex/materials/models/chicken/chicken_polish_brown_tint_mask_psd_945fed9a.png"
+					},
+					"params": {
+						"g_bFogEnabled": 1,
+						"g_bMaskRoughnessAdjustmentsByTintMask": 1,
+						"g_nMaskDetailTextureByTintMask": 2,
+						"g_nScaleTexCoordUByModelScaleAxis": 0,
+						"g_nScaleTexCoordVByModelScaleAxis": 0,
+						"g_nTextureAddressModeU": 0,
+						"g_nTextureAddressModeV": 0,
+						"g_fBrightness": 1,
+						"g_fContrast": 1,
+						"g_fDetailBlendFactor": 1,
+						"g_fDetailBrightness": 1,
+						"g_fDetailContrast": 1,
+						"g_fDetailHueShift": 0,
+						"g_fDetailSaturation": 1,
+						"g_fHueShift": 0,
+						"g_flAmbientOcclusionMasking": 0.4,
+						"g_flDetailTexCoordRotation": 0,
+						"g_flModelTintAmount": 1,
+						"g_flTexCoordRotation": 0,
+						"g_fSaturation": 1,
+						"g_fTextureRoughnessBrightness": 1,
+						"g_fTextureRoughnessContrast": 1,
+						"g_vSphericalAnisotropyAngle": 0,
+						"g_vColorTint": [
+							1,
+							1,
+							1,
+							0
+						],
+						"g_vDetailTexCoordOffset": [
+							-0.375,
+							-0.375,
+							0,
+							0
+						],
+						"g_vDetailTexCoordScale": [
+							0.25,
+							0.25,
+							0,
+							0
+						],
+						"g_vSphericalAnisotropyPole": [
+							-0.022,
+							0,
+							-0.311,
+							0
+						],
+						"g_vTexCoordCenter": [
+							0.5,
+							0.5,
+							0,
+							0
+						],
+						"g_vTexCoordOffset": [
+							0,
+							0,
+							0,
+							0
+						],
+						"g_vTexCoordScale": [
+							1,
+							1,
+							0,
+							0
+						],
+						"g_vTexCoordScrollSpeed": [
+							0,
+							0,
+							0,
+							0
+						]
+					},
+					"seedExpressions": {
+						"g_fBrightness": "return lerp(0.7, 1.1, pow($ChickenBrightness, 4));",
+						"g_fContrast": "return lerp(0.95, 1.4, pow($ChickenContrast, 0.5));",
+						"g_fDetailHueShift": "return lerp(-16, 16, $ChickenDetailHue);",
+						"g_fHueShift": "return lerp(-5, 55, frac(($ChickenHue * 0.5)));",
+						"g_fSaturation": "return (lerp(0.4, lerp(1, 0.75, abs((($ChickenHue * 2) - 1))), pow($ChickenSaturation, 0.25)) * (0.7 + (smoothstep(0, 0.4, $ChickenHue) * 0.3)));",
+						"g_vDetailTexCoordOffset": "v0 = frac($ChickenUVOffset); v1 = ((v0 * 8) - frac((v0 * 8))); v2 = ((v0 * 2) - frac((v0 * 2))); return (float2(-0.375, -0.375) + float2((0.25 * v1), (0.25 * v2)));"
+					},
+					"renderAttributesUsed": [
+						"$ChickenBrightness",
+						"$ChickenContrast",
+						"$ChickenHue",
+						"$ChickenSaturation",
+						"$ChickenDetailHue",
+						"$ChickenUVOffset"
+					]
+				}
+			],
+			"matgrpWeights": [
+				{
+					"matgrp": 1,
+					"freq": 1
+				},
+				{
+					"matgrp": 2,
+					"freq": 2
+				}
+			],
+			"matparams": [
+				{
+					"name": "$ChickenHue",
+					"slot": 1
+				},
+				{
+					"name": "$ChickenUVOffset",
+					"slot": 2
+				},
+				{
+					"name": "$ChickenSaturation",
+					"slot": 3
+				},
+				{
+					"name": "$ChickenContrast",
+					"slot": 4
+				},
+				{
+					"name": "$ChickenBrightness",
+					"slot": 5
+				},
+				{
+					"name": "$ChickenIridescence",
+					"slot": 6
+				},
+				{
+					"name": "$ChickenDetailHue",
+					"slot": 7
+				},
+				{
+					"name": "$ChickenDetailBlendFactor",
+					"slot": 8
+				}
+			],
+			"characteristics": [
+				{
+					"name": "fatness",
+					"sequenceMin": "chicken_hips_min",
+					"sequenceMax": "chicken_hips_max"
+				},
+				{
+					"name": "tail",
+					"sequenceMin": "chicken_tail_scale_min",
+					"sequenceMax": "chicken_tail_scale_max"
+				}
+			],
+			"presets": {
+				"adolescent": {
+					"fatness": [
+						0,
+						0.5
+					],
+					"tail": [
+						0,
+						0.5
+					]
+				},
+				"adult": {
+					"fatness": [
+						0,
+						1
+					],
+					"tail": [
+						0,
+						1
+					]
+				}
+			},
+			"shapes": {
+				"fatness": {
+					"bones": {
+						"pelvis": {
+							"sMin": [
+								0.589,
+								0.589,
+								0.589
+							],
+							"sMax": [
+								1.7845876,
+								1.7845876,
+								1.7845876
+							]
+						},
+						"wing_2_L_ENV": {
+							"tMin": [
+								0,
+								0,
+								0
+							],
+							"tMax": [
+								-0.0017316772,
+								-0.005593457,
+								0.004303613
+							],
+							"rMin": [
+								0,
+								0,
+								0,
+								1
+							],
+							"rMax": [
+								-0.013638046,
+								0.016831765,
+								0.0056105885,
+								0.9997496
+							]
+						}
+					}
+				},
+				"tail": {
+					"bones": {
+						"eyeLidPolish_L": {
+							"sMin": [
+								0.9791711,
+								0.9791711,
+								0.9791711
+							],
+							"sMax": [
+								0.9345477,
+								0.9345477,
+								0.9345477
+							]
+						},
+						"eyeLidPolish_R": {
+							"sMin": [
+								0.979171,
+								0.979171,
+								0.979171
+							],
+							"sMax": [
+								0.9345476,
+								0.9345476,
+								0.9345476
+							]
+						}
+					}
+				}
+			}
+		},
+		"egg_pristine": {
+			"model": "models/chicken/egg_pristine.vmdl",
+			"materialGroups": [],
+			"matgrpWeights": [],
+			"matparams": [
+				{
+					"name": "$egg_brightness",
+					"slot": 1
+				},
+				{
+					"name": "$egg_hue",
+					"slot": 2
+				},
+				{
+					"name": "$egg_saturation",
+					"slot": 3
+				},
+				{
+					"name": "$egg_detail_speckle",
+					"slot": 4
+				},
+				{
+					"name": "$detail_ushift",
+					"slot": 5
+				},
+				{
+					"name": "$detail_vshift",
+					"slot": 6
+				},
+				{
+					"name": "$egg_detail_scale",
+					"slot": 7
+				}
+			],
+			"characteristics": [],
+			"presets": {},
+			"shapes": {},
+			"materials": [
+				{
+					"vmat": "materials/models/egg/egg_basic.vmat",
+					"shader": "csgo_character.vfx",
+					"features": {
+						"F_ENABLE_ADJUSTMENTS": 1,
+						"F_RENDER_BACKFACES": 1,
+						"F_TINT_MASK": 1
+					},
+					"textures": {
+						"g_tAmbientOcclusion": "pettex/materials/models/egg/egg_basic_vmat_g_tambientocclusion_8eb2436b.png",
+						"g_tColor": "pettex/materials/models/egg/egg_color_psd_d9ad74df.png",
+						"g_tDetail": "pettex/materials/models/egg/egg_detail_psd_c097a5b.png",
+						"g_tMetalness": "pettex/materials/models/egg/egg_basic_vmat_g_tmetalness_b70f8f59.png",
+						"g_tNormal": "pettex/materials/models/egg/egg_normal_psd_aa5632c1.png",
+						"g_tTintMask": "pettex/materials/models/egg/egg_tint_mask_psd_5a9a0841.png"
+					},
+					"params": {
+						"g_bFogEnabled": 1,
+						"g_bMaskRoughnessAdjustmentsByTintMask": 0,
+						"g_nMaskDetailTextureByTintMask": 1,
+						"g_nScaleTexCoordUByModelScaleAxis": 0,
+						"g_nScaleTexCoordVByModelScaleAxis": 0,
+						"g_nTextureAddressModeU": 0,
+						"g_nTextureAddressModeV": 0,
+						"g_fBrightness": 1,
+						"g_fContrast": 1,
+						"g_fDetailBlendFactor": 0.5,
+						"g_fDetailBrightness": 1,
+						"g_fDetailContrast": 1,
+						"g_fDetailHueShift": 0,
+						"g_fDetailSaturation": 1,
+						"g_fHueShift": 0,
+						"g_flAmbientOcclusionMasking": 0.4,
+						"g_flDetailTexCoordRotation": 0,
+						"g_flModelTintAmount": 1,
+						"g_flTexCoordRotation": 0,
+						"g_fSaturation": 1,
+						"g_fTextureRoughnessBrightness": 1,
+						"g_fTextureRoughnessContrast": 1,
+						"g_vColorTint": [
+							1,
+							1,
+							1,
+							0
+						],
+						"g_vDetailTexCoordOffset": [
+							0,
+							0,
+							0,
+							0
+						],
+						"g_vDetailTexCoordScale": [
+							1,
+							1,
+							0,
+							0
+						],
+						"g_vTexCoordCenter": [
+							0.5,
+							0.5,
+							0,
+							0
+						],
+						"g_vTexCoordOffset": [
+							0,
+							0,
+							0,
+							0
+						],
+						"g_vTexCoordScale": [
+							1,
+							1,
+							0,
+							0
+						],
+						"g_vTexCoordScrollSpeed": [
+							0,
+							0,
+							0,
+							0
+						],
+						"TextureAmbientOcclusion": [
+							0.694118,
+							0.694118,
+							0.694118,
+							0
+						],
+						"TextureRimMask": [
+							1,
+							1,
+							1,
+							0
+						]
+					},
+					"seedExpressions": {
+						"g_fBrightness": "return lerp(lerp(0.2, 1, $egg_brightness), 1, smoothstep(0.11, 0.25, ($egg_hue * $egg_hue)));",
+						"g_fDetailBlendFactor": "v0 = lerp(lerp(0.1, 1, $egg_brightness), 1, smoothstep(0.11, 0.25, ($egg_hue * $egg_hue))); return ($egg_detail_speckle * lerp(0.3, 0.9, v0));",
+						"g_fHueShift": "return lerp(-12, 165, ($egg_hue * $egg_hue));",
+						"g_fSaturation": "return lerp(lerp(0.5, 0.05, ($egg_hue * $egg_hue)), lerp(1, 0.6, smoothstep(0, 0.4, ($egg_hue * $egg_hue))), $egg_saturation);",
+						"g_vDetailTexCoordOffset": "return float2($detail_ushift, $detail_vshift);",
+						"g_vDetailTexCoordScale": "v0 = lerp(0.5, 1.5, $egg_detail_scale); return float2(v0, v0);"
+					},
+					"renderAttributesUsed": [
+						"$egg_brightness",
+						"$egg_hue",
+						"$egg_saturation",
+						"$egg_detail_speckle",
+						"$detail_ushift",
+						"$detail_vshift",
+						"$egg_detail_scale"
+					]
+				}
+			]
+		}
+	}
+}

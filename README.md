@@ -1,10 +1,10 @@
 # @skinhub/cdn
 
 Typed data layer over the CS2 game data published to the SkinHub CDN - skins, stickers, gloves,
-agents, music kits, charms, collectibles and Valve's own `items_game` - plus the CS2 inspect-link
-codec.
+agents, music kits, charms, collectibles, chicken pets and Valve's own `items_game` - plus the CS2
+inspect-link codec and the WeaponPaints row formats.
 
-The data is **fetched at runtime, never bundled**. The eight files are about 16 MB; shipping them
+The data is **fetched at runtime, never bundled**. The files are about 16 MB; shipping them
 inside a dependency would be worse than the problem they solve. If you want an offline copy, you
 supply it (see [Fallbacks](#fallbacks)).
 
@@ -41,6 +41,8 @@ built-ins, no top-level `await` on import, no global state you did not ask for.
 - [Entry points and bundle size](#entry-points-and-bundle-size)
 - [The types](#the-types)
 - [Inspect links and placement](#inspect-links-and-placement)
+- [Pets](#pets)
+- [The C4](#the-c4)
 - [API reference](#api-reference)
 - [Development](#development)
 
@@ -48,7 +50,7 @@ built-ins, no top-level `await` on import, no global state you did not ask for.
 
 ## What it serves
 
-Eight files under `data/` on the CDN. Row counts are from the export current at the time of writing.
+Ten files under `data/` on the CDN. Row counts are from the export current at the time of writing.
 
 | helper | file | rows | size | shape |
 |---|---|---:|---:|---|
@@ -60,6 +62,8 @@ Eight files under `data/` on the CDN. Row counts are from the export current at 
 | `fetchGloves` | `gloves.json` | 95 | 24 KB | `Glove[]` |
 | `fetchAgents` | `agents.json` | 81 | 52 KB | `Agent[]` |
 | `fetchItemsGame` | `items_game.json` | - | 6.5 MB | `{ items_game: … }` |
+| `fetchPets` | `pets.json` | 5 pets | small | `PetsJson` - an object, see [Pets](#pets) |
+| `fetchPetVariants` | `petVariants.json` | 5 models | - | `PetVariantsJson` - render data, see [Pets](#pets) |
 
 Anything else on the CDN - `manifest.json`, a file added after this release - is reachable with
 `fetchCdnJson(path)` and `fetchCdnData(file)`, so you are never blocked on a release here.
@@ -77,7 +81,8 @@ await fetchCdnData<Row[]>('something-new.json') // <origin>/data/something-new.j
 
 `skins.json` **is the whole weapon catalogue**. Counted on the current export: 1,483 gun rows, 576
 melee, 94 glove and 8 Zeus. Knives and gloves are already in it, so answering "what exists" is one
-4.2 MB fetch, not three.
+4.2 MB fetch, not three. From CS2 1.41.8.2 the export adds one vanilla row for the C4 (in
+`equipment`, beside the Zeus), which moves each count it lands in up by one - see [The C4](#the-c4).
 
 `@skinhub/cdn/query` is what you ask it with. **Every function takes the rows as its first
 argument and none of them fetch.** That is deliberate: `skinsForWeapon(skins, 'AK-47')` is honest
@@ -470,12 +475,13 @@ a 27 KB HTML page**, not JSON. Code that goes straight to `response.json()` repo
 
 | import | contents |
 |---|---|
-| `@skinhub/cdn` | everything: config, cache, errors, fetch, all eight dataset helpers, the query layer, the inspect codec and the placement layer |
+| `@skinhub/cdn` | everything: config, cache, errors, fetch, every dataset helper, the query layer, the inspect codec and the placement layer |
 | `@skinhub/cdn/skins` | `fetchSkins` + the skin types |
 | `@skinhub/cdn/stickers` `…/gloves` `…/agents` `…/music` `…/keychains` `…/collectibles` `…/items-game` | one dataset each |
+| `@skinhub/cdn/pets` | `fetchPets` / `fetchPetVariants`, the pet types, the stage table and the `wp_player_pets` row codec |
 | `@skinhub/cdn/query` | every filter, lookup and market-hash-name helper - **pure, fetches nothing** |
 | `@skinhub/cdn/catalog` | `loadSkinIndex` / `loadCatalog` - fetch and index in one call |
-| `@skinhub/cdn/placement` | placement types, normalisation, the WeaponPaints row format |
+| `@skinhub/cdn/placement` | placement types, normalisation, the WeaponPaints row formats (skins and pets), the C4 constants |
 | `@skinhub/cdn/inspect` | inspect-link encode/decode - works in a browser |
 
 **This package has no runtime dependencies.** Nothing to audit, nothing to resolve, and nothing that
@@ -487,16 +493,18 @@ Measured with a real bundler against `dist`:
 |---|---|---|
 | `fetchGloves` from `@skinhub/cdn/gloves` | browser | 4.5 KB, and no trace of the other seven datasets |
 | `fetchGloves` from `@skinhub/cdn` | browser | 4.5 KB - a named import off the barrel costs the same |
-| `formatStickerRow` from `@skinhub/cdn/placement` | browser | 2.0 KB |
+| `formatStickerRow` from `@skinhub/cdn/placement` | browser | 2.3 KB |
+| `formatPetRow` from `@skinhub/cdn/placement` | browser | 2.2 KB, with no dataset file name or origin in it |
+| `fetchPets` from `@skinhub/cdn/pets` | browser | 4.5 KB |
 | `listKnifeTypes` from `@skinhub/cdn/query` | browser | 1.7 KB, with no origin, fetch or cache in it |
 | `listKnifeTypes` from `@skinhub/cdn` | browser | 1.7 KB - again the same through the barrel |
 | `marketHashName` from `@skinhub/cdn/query` | browser | 2.5 KB |
 | `resolveItem` from `@skinhub/cdn/query` | browser | 5.5 KB |
 | `import * as query` from `@skinhub/cdn/query` | browser | 19.3 KB - the whole surface, still network-free |
 | `loadSkinIndex` from `@skinhub/cdn/catalog` | browser | 14.8 KB - this one does fetch, by design |
-| `buildInspectUrl` from `@skinhub/cdn/inspect` | browser | 16.7 KB |
-| `buildInspectUrl` from `@skinhub/cdn/inspect` | node | 16.7 KB |
-| `import * as cdn` from `@skinhub/cdn` | browser | 59.8 KB - everything, because a namespace import keeps everything |
+| `buildInspectUrl` from `@skinhub/cdn/inspect` | browser | 18.3 KB |
+| `buildInspectUrl` from `@skinhub/cdn/inspect` | node | 18.3 KB |
+| `import * as cdn` from `@skinhub/cdn` | browser | 75.6 KB - everything, because a namespace import keeps everything |
 
 ### The inspect codec used to be server-only. It is not any more.
 
@@ -583,6 +591,13 @@ collectibles, and some collection and crate icons.
 ```ts
 {sticker.image ? <img src={sticker.image} /> : <Placeholder />}
 ```
+
+**`color` is the icon's own colour, `#rrggbb`, or `null` exactly when there is no icon.** On skins,
+stickers, collectibles, keychains and agents (not music or gloves). It is measured off the image, so
+it is a good placeholder tint behind a loading `<img>` - not the rarity colour, which is
+`skin.rarity.color`.
+
+**`pets.json` and `petVariants.json` are not arrays either** - see [Pets](#pets).
 
 **`items_game.json` is not an array.** It is `{ items_game: { …33 sections… } }` - Valve's KeyValues
 converted to JSON. The section names are typed so `data.items_game.paint_kits` autocompletes; the
@@ -703,6 +718,154 @@ never touched, which is what makes this safe with no migration.
 `id;-x;1;-y;seed` into an `id;x;y;z;seed` column. It returns `null` for rows that are already
 correct, so a migration using it is safe to re-run.
 
+### What CS2 1.41.8.2 changed in the link
+
+The pets update (2026-09-22) changed `CEconItemPreviewDataBlock`: field 11 went from
+`optional string customname` to `repeated string customnames` (one name per pet life stage), and
+fields 24 `pet_food_expiration_date` and 25 `blobdata` are new. The codec reads all three:
+
+- `EconItem.customnames` holds every name in wire order, **only when the link carries more than
+  one**. `customname` keeps its old meaning - the last name - so a one-name link decodes to exactly
+  the object it always did, and `cs2-inspect-lib` still agrees with it byte for byte.
+- `EconItem.pet_food_expiration_date` (uint32) and `EconItem.blobdata` (`Uint8Array`) appear when
+  present. Nobody has published what `blobdata` holds.
+
+A pet goes through the same `SkinPlacement` as a weapon - see [Pets](#pets).
+
+---
+
+## Pets
+
+CS2 1.41.8.2 added chicken pets. One item definition, 4681 `pet`, carries the `pet id` (which
+`pet_definitions` row: 1 egg, 2 chick, 3 Catalana, 4 Silkie, 5 Polish), the `upgrade level` (0 egg,
+1 chick, 2 pullet, 3 hen) and a `pet seed` the client turns into a colour and body shape. Eggs
+(4948) and feed (4949) are their own item definitions.
+
+```ts
+import { cdnUrl } from '@skinhub/cdn'
+import { fetchPets, fetchPetVariants, findPet, petModelVariants, petKindForStage } from '@skinhub/cdn/pets'
+
+const pets = await fetchPets()               // data/pets.json - small, an object
+const silkie = findPet(pets, 4)              // { name: 'chicken_silkie_01', breed: 'silkie', kind: 'adult', … }
+cdnUrl(silkie.glb)                           // paths in both files are CDN paths - resolve them
+
+const variants = await fetchPetVariants()    // data/petVariants.json - render data, fetch when you draw
+petModelVariants(variants, silkie)?.materialGroups  // the colours, by authored group name
+petKindForStage('pullet')                    // 'adult' - the pullet and the hen share the breed model
+```
+
+**What is not known yet**, and so is not guessed at here: how the seed becomes a look (that code
+is client-only), whether `pet id` changes when the egg hatches, and where the seed rides in a real
+pet's inspect link. Nothing in this package interprets the seed.
+
+### In an inspect link
+
+`SkinPlacement` carries a pet with four optional fields, absent on every weapon so no existing
+placement changes shape:
+
+| field | wire | meaning |
+|---|---|---|
+| `petindex` | 19 | `pet id` - the `pet_definitions` row |
+| `upgrade_level` | 23 | the stage, 0..3 |
+| `nametag2` | 11 (second entry) | the pullet's name (`custom name attr 2`) |
+| `nametag3` | 11 (third entry) | the hen's name (`custom name attr 3`) |
+
+`nametag` is the chick's name, and `paintseed` carries the `pet seed` - the natural carrier, but an
+inference until a real pet link is decoded. A pet with only one name uses the plain single-name
+encoding, so its link is byte-identical to what 0.3 wrote; with a second or third name the names go
+out as the repeated field in stage order, an empty stage as `""`.
+
+```ts
+buildInspectUrl({
+  defindex: 4681,       // the pet item - not a skins.json row
+  paintindex: 0,
+  paintwear: 0,
+  paintseed: 3141592653, // the pet seed
+  petindex: 4,          // Silkie
+  upgrade_level: 3,     // hen
+  nametag: 'Nugget',
+  nametag2: 'Drumstick',
+  nametag3: 'Hen Solo',
+  stickers: [],
+  keychain: null,
+})
+```
+
+### WeaponPaints: `wp_player_pets`
+
+One row per player (pets are `noteam`), keyed by `steamid`, which the row codec leaves to you:
+
+```sql
+CREATE TABLE IF NOT EXISTS wp_player_pets (
+  steamid     VARCHAR(18)  NOT NULL PRIMARY KEY,
+  pet_id      INT          NOT NULL,
+  pet_stage   TINYINT      NOT NULL DEFAULT 3,  -- 0 egg, 1 chick, 2 pullet, 3 hen
+  pet_variant INT          NULL,                -- material group override; NULL = the seed decides
+  pet_seed    INT UNSIGNED NOT NULL DEFAULT 0,
+  pet_name    VARCHAR(32)  NULL
+)
+```
+
+```ts
+import { formatPetRow, parsePetRow, PET_ROW_COLUMNS, WP_PETS_TABLE } from '@skinhub/cdn/placement'
+
+formatPetRow({ petId: 4, stage: 'pullet', variant: 7, petSeed: 3141592653, name: 'Drumstick' })
+// { pet_id: 4, pet_stage: 2, pet_variant: 7, pet_seed: 3141592653, pet_name: 'Drumstick' }
+
+parsePetRow(rowFromMysql)   // numbers, numeric strings or bigints; null when there is no pet
+```
+
+Integers are quantised onto each column's range - non-negative and whole, at most 2147483647 for
+the signed `INT` columns `pet_id` and `pet_variant`, 4294967295 for `pet_seed` - an unknown stage
+falls back to the column default (hen), and a missing or negative variant is `NULL`. A name goes
+through `normalizePetName`, a port of the plugin's own sanitiser, so the site stores the string the
+game would: control characters and `{ } < >` removed, trimmed, and cut to 32 code points on a
+whole-character boundary (an emoji sequence or a flag is never split).
+
+**No pet is no row.** `formatPetRow(null)` returns `null`, which means delete the row - the plugin
+does the same on `!pet off` - and `parsePetRow` answers `null` for a missing row, so the pair
+round-trips "no pet" too:
+
+```ts
+const row = formatPetRow(selection)          // selection: PetSelectionInput | null
+row ? upsert(steamid, row) : remove(steamid)
+```
+
+`formatPetRow` **throws** for a `petId` below 1: a selection that claims a pet and names none is a
+bug to surface, not a row to write. `parsePetRow(formatPetRow(x))` is `x`, and a load-and-save
+leaves a row untouched.
+
+A name the column accepts can still be too long for an inspect link to read back. The codec checks
+a name in UTF-16 units (100) when it writes a link and in UTF-8 bytes (100) when it reads one -
+`cs2-inspect-lib`'s asymmetry, kept on purpose so the same links stay readable - so 32 four-byte
+emoji (128 bytes) build a link that `readInspectUrl` refuses. The in-game rename box stops at 20
+characters, so only a pasted name gets there.
+
+---
+
+## The C4
+
+CS2 1.41.8.2 lets the C4 take stickers (it could already take a charm). It is defindex 49,
+`weapon_c4`, paint 0. From that update the export carries one vanilla row for it
+(`skin-vanilla-weapon_c4`, `C4 Explosive | Default`, category `equipment`), so the row-derived query
+functions see it like the Zeus. A `skins.json` older than that has no C4 row at all, and for that
+case - a fallback copy, a database mirror - the C4 also exists as constants that agree with the row:
+
+```ts
+import { C4_DEFINDEX, C4_WEAPON, stickerSlotsFor } from '@skinhub/cdn/placement'
+
+C4_WEAPON                   // { defindex: 49, id: 'weapon_c4', name: 'C4 Explosive', category: 'equipment' }
+stickerSlotsFor(49)         // [0, 1, 2, 3, 4] - four authored homes plus a borrowed fifth
+stickerSlotsFor(7)          // [0, 1, 2, 3, 4]
+```
+
+Everything else already works on a C4 unchanged: `makeSkinPlacement`, the inspect link, and the
+`wp_player_skins` sticker and charm columns (nothing here ever filtered by a weapon list). The C4's
+model authors four sticker homes; the SkinHub viewer derives a fifth on the side of the bomb, and the
+WeaponPaints plugin anchors slot 4 there itself, so write the fifth with anchor 0 like any other slot
+(`STICKER_ANCHORS` has no C4 row on purpose). `resolveItem` names a C4 (`weapon_c4`, `C4 Explosive`, `equipment`, `vanilla: true`)
+with or without `skins`; when the list has the exporter's row, that row is what it returns.
+
 ---
 
 ## API reference
@@ -713,12 +876,12 @@ correct, so a migration using it is safe to re-run.
 
 ### Fetching
 `fetchSkins` · `fetchStickers` · `fetchGloves` · `fetchAgents` · `fetchMusicKits` ·
-`fetchKeychains` · `fetchCollectibles` · `fetchItemsGame` · `fetchCdnData` · `fetchCdnJson` ·
-`inFlightCount`
+`fetchKeychains` · `fetchCollectibles` · `fetchItemsGame` · `fetchPets` · `fetchPetVariants` ·
+`fetchCdnData` · `fetchCdnJson` · `inFlightCount`
 
 File-name constants, if you are keying a cache or a preload by them: `SKINS_FILE`, `STICKERS_FILE`,
 `GLOVES_FILE`, `AGENTS_FILE`, `MUSIC_FILE`, `KEYCHAINS_FILE`, `COLLECTIBLES_FILE`,
-`ITEMS_GAME_FILE`.
+`ITEMS_GAME_FILE`, `PETS_FILE`, `PET_VARIANTS_FILE`.
 
 ### Caching
 `createMemoryCache` · `getDefaultCache` · `clearDefaultCache` · `DEFAULT_TTL_MS` · `CdnCache`
@@ -731,7 +894,14 @@ File-name constants, if you are keying a cache or a preload by them: `SKINS_FILE
 `SkinWear` · `SkinCollection` · `SkinCrate` · `SkinTeam` · `Sticker` · `Stickers` · `Glove` ·
 `Gloves` · `Agent` · `Agents` · `AgentTeam` · `MusicKit` · `MusicKits` · `Keychain` · `Keychains` ·
 `Collectible` · `Collectibles` · `ItemsGame` · `ItemsGameSection` · `RarityToken` · `ImageUrl` ·
-`CdnFetchOptions` · `DatasetOptions` · `FetchLike`
+`IconColor` · `CdnFetchOptions` · `DatasetOptions` · `FetchLike`
+
+### `@skinhub/cdn/pets`
+`fetchPets` · `fetchPetVariants` · `findPet` · `petModelVariants` · `PET_STAGES` ·
+`petStageForLevel` · `petLevelForStage` · `isPetStage` · `petKindForStage` · `PET_ITEM_DEFINDEX` ·
+`CHICKEN_EGG_DEFINDEX` · `CHICKEN_FEED_DEFINDEX` · `LOADOUT_SLOT_PET` · `PetsJson` · `PetRow` ·
+`PetStage` · `PetBreed` · `PetKind` · `PetVariantsJson` · `PetModelVariants` · `PetMaterialGroup` ·
+`PetMaterial` · `PetBoneRange` - plus the `wp_player_pets` row codec listed under `/placement`.
 
 ### `@skinhub/cdn/query`
 
@@ -760,6 +930,9 @@ Wear and rarity - `WEAR_TIERS` · `wearTier` · `wearTierForFloat` · `rarityRan
 
 Resolve - `resolveItem` · `resolveItemWith` · `hasStickers` · `hasKeychain`
 
+The C4, for a `skins.json` older than 1.41.8.2 that has no row for it - `C4_DEFINDEX` · `C4_WEAPON_ID` · `C4_NAME` · `C4_WEAPON` ·
+`C4_STICKER_SLOTS` · `isC4` · `stickerSlotsFor`
+
 Types - `SkinCategoryKey` · `WeaponRef` · `WeaponType` · `ResolvedWeapon` · `WeaponSelector` ·
 `CategorySummary` · `NamedGroup` · `SkinRef` · `SkinIndex` · `MarketEntry` · `MarketVariant` ·
 `MarketHashNameOptions` · `ParsedMarketHashName` · `ResolvedItem` · `ResolvedSticker` ·
@@ -778,6 +951,14 @@ Types - `SkinCategoryKey` · `WeaponRef` · `WeaponType` · `ResolvedWeapon` · 
 
 The fifth slot's anchor - `STICKER_ANCHORS` · `stickerAnchorFor` · `stickerAnchorLookup` ·
 `FIFTH_STICKER_SLOT` · `NO_STICKER_ANCHOR` · `StickerAnchor` · `AnchorCatalogSkin`
+
+Pets (`wp_player_pets`) - `formatPetRow` · `parsePetRow` · `normalizePetName` · `WP_PETS_TABLE` ·
+`PET_ROW_COLUMNS` · `PET_NAME_MAX_LENGTH` · `PET_STAGES` · `DEFAULT_PET_STAGE` ·
+`petStageForLevel` · `petLevelForStage` · `isPetStage` · `PetSelection` · `PetSelectionInput` ·
+`WeaponPaintsPetRow` · `PetStage`
+
+The C4 - `C4_DEFINDEX` · `C4_WEAPON_ID` · `C4_NAME` · `C4_PAINT_INDEX` · `C4_WEAPON` ·
+`C4_STICKER_SLOTS` · `isC4` · `stickerSlotsFor`
 
 ### `@skinhub/cdn/inspect`
 `buildInspectUrl` · `readInspectUrl` · `toEconItem` · `fromEconItem` · `toGameCommand` ·
@@ -802,15 +983,20 @@ Two extra tiers, both opt-in because they need something the repo does not carry
 # Validate the types against the full 16 MB export rather than the committed fixtures
 SKINHUB_CDN_FIXTURES=/path/to/asset-export/out/data bun test
 
-# Hit the real CDN
+# Hit the real CDN (or SKINHUB_CDN_URL=<origin> bun run test:live for another one)
 bun run test:live
 ```
+
+The live tier sends `Origin: https://skinhub.gg` on every request. `cdn.skinhub.gg` varies on
+`Origin` but its edge cache does not, so a request without one warms a copy with no CORS header that
+browsers then fail to fetch. Anything else you point at the real CDN from a server should do the same.
 
 `test/fixtures/` holds a small sample of each real file, chosen so every edge case documented above
 appears in it - the vanilla skins, the numeric glove `paint`, the `"null"` agent models, an empty
 image, every nullable field null at least once. `test/types.test.ts` asserts both that the fixtures
 validate and that those edge cases are actually present, so the validator cannot pass by being fed
-easy rows.
+easy rows. `pets.json` and `petVariants.json` are newer than some exports on disk, so the full-export
+tier skips them when the directory predates CS2 1.41.8.2 rather than failing.
 
 `test/fixtures/inspect-corpus.json` is the other kind of fixture: the real ids the inspect corpus is
 generated from - every `[defindex, paintindex]` pair in `skins.json`, a sample of sticker ids across

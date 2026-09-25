@@ -3,6 +3,7 @@
 		"id": "1004",
 		"name": "Museum Map Coin",
 		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/status_icons/maptoken_museum_png.png",
+		"color": "#8a763b",
 		"rarity": "ancient",
 		"description": null,
 		"model": "maptoken_museum"
@@ -11,6 +12,7 @@
 		"id": "4986",
 		"name": "Premier Season One Medal",
 		"image": "",
+		"color": null,
 		"rarity": "ancient",
 		"description": "This is a commemorative Premier Medal awarded for your active participation in Premier Season One.",
 		"model": "premier_seasons/premier_season_1_coin_eg"
@@ -19,6 +21,7 @@
 		"id": "874",
 		"name": "5 Year Veteran Coin",
 		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/status_icons/5yearcoin_png.png",
+		"color": "#d89134",
 		"rarity": "ancient",
 		"description": "Has been a member of the Counter-Strike community for over 5 years.",
 		"model": "5_year_coin"
@@ -27,6 +30,7 @@
 		"id": "875",
 		"name": "Champion at DreamHack 2013",
 		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/status_icons/dreamhack_2013_champion_png.png",
+		"color": "#e3713f",
 		"rarity": "ancient",
 		"description": "This championship trophy was awarded to the Champion at The 2013 DreamHack SteelSeries CS:GO Championship.",
 		"model": "dreamhack_trophy_champion"
@@ -35,6 +39,7 @@
 		"id": "876",
 		"name": "Finalist at DreamHack 2013",
 		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/status_icons/dreamhack_2013_finalist_png.png",
+		"color": "#e3713f",
 		"rarity": "ancient",
 		"description": "This championship trophy was awarded to the Finalist at The 2013 DreamHack SteelSeries CS:GO Championship.",
 		"model": "dreamhack_trophy_finalist"
@@ -43,6 +48,7 @@
 		"id": "1000",
 		"name": "Operation Payback Pass",
 		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/status_icons/community_support_pass_png.png",
+		"color": "#509961",
 		"rarity": "common",
 		"description": "The Operation Payback event ran from April 25th to September 2nd, 2013 and rewarded community map makers with over $180,000. This pass no longer grants access to an Operation, but may be redeemed for a commemorative Operation Payback Coin.",
 		"model": null

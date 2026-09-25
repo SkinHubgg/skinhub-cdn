@@ -1,0 +1,102 @@
+{
+	"petItemDefindex": 4681,
+	"eggItemDefindex": 4948,
+	"feedItemDefindex": 4949,
+	"loadoutSlot": 57,
+	"attributes": {
+		"upgradeLevel": 268,
+		"petId": 296,
+		"petSeed": 313,
+		"foodExpirationDate": 303,
+		"nextUpgradeDate": 304,
+		"customName": 111,
+		"customName2": 328,
+		"customName3": 329
+	},
+	"typeName": "Pet",
+	"loadoutSlotName": "Pet",
+	"stages": [
+		{
+			"level": 0,
+			"stage": "egg",
+			"name": "Egg"
+		},
+		{
+			"level": 1,
+			"stage": "chick",
+			"name": "Chick"
+		},
+		{
+			"level": 2,
+			"stage": "pullet",
+			"name": "Pullet"
+		},
+		{
+			"level": 3,
+			"stage": "hen",
+			"name": "Hen"
+		}
+	],
+	"pets": [
+		{
+			"id": 1,
+			"name": "chicken_egg_01",
+			"displayName": "Chicken Egg",
+			"locName": "#chicken_egg",
+			"kind": "egg",
+			"breed": null,
+			"model": "models/chicken/egg_pristine.vmdl",
+			"modelKey": "egg_pristine",
+			"glb": "models-pets/models/chicken/egg_pristine.glb",
+			"icon": "econicons/panorama/images/econ/pets/chicken_egg_png.png"
+		},
+		{
+			"id": 2,
+			"name": "chicken_chick_01",
+			"displayName": "Chick",
+			"locName": "#pet_chick",
+			"kind": "chick",
+			"breed": null,
+			"model": "models/chicken/chick.vmdl",
+			"modelKey": "chick",
+			"glb": "models-pets/models/chicken/chick.glb",
+			"icon": null
+		},
+		{
+			"id": 3,
+			"name": "chicken_catalana_01",
+			"displayName": "Catalana Chicken",
+			"locName": "#pet_chicken",
+			"kind": "adult",
+			"breed": "catalana",
+			"model": "models/chicken/chicken.vmdl",
+			"modelKey": "chicken",
+			"glb": "models-pets/models/chicken/chicken.glb",
+			"icon": null
+		},
+		{
+			"id": 4,
+			"name": "chicken_silkie_01",
+			"displayName": "Silkie Chicken",
+			"locName": "#pet_chicken",
+			"kind": "adult",
+			"breed": "silkie",
+			"model": "models/chicken/chicken_silkie.vmdl",
+			"modelKey": "chicken_silkie",
+			"glb": "models-pets/models/chicken/chicken_silkie.glb",
+			"icon": null
+		},
+		{
+			"id": 5,
+			"name": "chicken_polish_01",
+			"displayName": "Polish Chicken",
+			"locName": "#pet_chicken",
+			"kind": "adult",
+			"breed": "polish",
+			"model": "models/chicken/chicken_polish.vmdl",
+			"modelKey": "chicken_polish",
+			"glb": "models-pets/models/chicken/chicken_polish.glb",
+			"icon": null
+		}
+	]
+}

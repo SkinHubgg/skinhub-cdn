@@ -20,7 +20,7 @@
 
 export type Issue = string
 
-type Check = (value: unknown, path: string, issues: Issue[]) => void
+export type Check = (value: unknown, path: string, issues: Issue[]) => void
 
 const typeName = (value: unknown) =>
 	value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value
@@ -149,6 +149,7 @@ export const skinShape = obj({
 		team: obj({ required: { id: oneOf('both', 'terrorists', 'counter-terrorists'), name: str } }),
 		legacy_model: bool,
 		image: str,
+		color: nullable(str),
 		original: obj({ required: { name: str } }),
 	},
 	optional: {
@@ -166,6 +167,7 @@ export const stickerShape = obj({
 		image: str,
 		rarity: nullable(rarityToken),
 		description: nullable(str),
+		color: nullable(str),
 		material: str,
 		is_patch: bool,
 		tournament_event_id: nullable(num),
@@ -174,7 +176,7 @@ export const stickerShape = obj({
 	},
 })
 
-/** The five fields `keychains.json` and `music.json` share. `collectibles.json` adds `model`. */
+/** The five fields `keychains.json` and `music.json` share. `collectibles.json` adds `model`, and every list but music adds `color`. */
 const namedRow = {
 	id: str,
 	name: str,
@@ -183,10 +185,13 @@ const namedRow = {
 	description: nullable(str),
 }
 
-export const collectibleShape = obj({ required: { ...namedRow, model: nullable(str) } })
+/** `#rrggbb` of the row's own icon, or null - on every list except music and gloves (see `IconColor`). */
+const iconColor = nullable(str)
 
-export const keychainShape = obj({ required: namedRow })
-export const musicKitShape = keychainShape
+export const collectibleShape = obj({ required: { ...namedRow, color: iconColor, model: nullable(str) } })
+
+export const keychainShape = obj({ required: { ...namedRow, color: iconColor } })
+export const musicKitShape = obj({ required: namedRow })
 
 export const gloveShape = obj({
 	required: { weapon_defindex: num, paint: union(str, num), image: str, paint_name: str },
@@ -201,7 +206,109 @@ export const agentShape = obj({
 		id: nullable(str),
 		rarity: nullable(rarityToken),
 		description: nullable(str),
+		color: iconColor,
 	},
 })
 
 export const itemsGameShape = obj({ required: { items_game: recordOf(unknownValue) } })
+
+/* ---------------------------------------------------------------------------------------------
+ * Pets (CS2 1.41.8.2) - `data/pets.json` and `data/petVariants.json`, both objects.
+ * ------------------------------------------------------------------------------------------ */
+
+/** A fixed-length numeric array: a `[min, max]` range, a vec3, a quaternion. */
+export const tupleOf =
+	(length: number, check: Check): Check =>
+	(v, p, i) => {
+		if (!Array.isArray(v) || v.length !== length) return fail(i, p, `array of length ${length}`, v)
+		v.forEach((item, index) => check(item, `${p}[${index}]`, i))
+	}
+
+const petStage = oneOf('egg', 'chick', 'pullet', 'hen')
+
+export const petRowShape = obj({
+	required: {
+		id: num,
+		name: str,
+		displayName: str,
+		locName: str,
+		kind: oneOf('egg', 'chick', 'adult'),
+		breed: nullable(oneOf('catalana', 'silkie', 'polish')),
+		model: str,
+		modelKey: str,
+		glb: str,
+		icon: nullable(str),
+	},
+})
+
+export const petsShape = obj({
+	required: {
+		petItemDefindex: num,
+		eggItemDefindex: num,
+		feedItemDefindex: num,
+		loadoutSlot: num,
+		attributes: obj({
+			required: {
+				upgradeLevel: num,
+				petId: num,
+				petSeed: num,
+				foodExpirationDate: num,
+				nextUpgradeDate: num,
+				customName: num,
+				customName2: num,
+				customName3: num,
+			},
+		}),
+		stages: arrayOf(obj({ required: { level: num, stage: petStage, name: str } })),
+		pets: arrayOf(petRowShape),
+	},
+	optional: { typeName: str, loadoutSlotName: str },
+})
+
+const petMaterialFields = {
+	vmat: str,
+	shader: str,
+	features: recordOf(num),
+	textures: recordOf(str),
+	params: recordOf(union(num, arrayOf(num))),
+	seedExpressions: recordOf(str),
+	renderAttributesUsed: arrayOf(str),
+}
+
+const presetRanges = recordOf(tupleOf(2, num))
+
+export const petModelVariantsShape = obj({
+	required: {
+		model: str,
+		materialGroups: arrayOf(obj({ required: { index: num, name: str, label: str, ...petMaterialFields } })),
+		matgrpWeights: arrayOf(obj({ required: { matgrp: num, freq: num } })),
+		matparams: arrayOf(obj({ required: { name: str, slot: num } })),
+		characteristics: arrayOf(obj({ required: { name: str, sequenceMin: str, sequenceMax: str } })),
+		presets: obj({ required: {}, optional: { adolescent: presetRanges, adult: presetRanges } }),
+		shapes: recordOf(
+			obj({
+				required: {
+					bones: recordOf(
+						obj({
+							required: {},
+							optional: {
+								tMin: tupleOf(3, num),
+								tMax: tupleOf(3, num),
+								rMin: tupleOf(4, num),
+								rMax: tupleOf(4, num),
+								sMin: tupleOf(3, num),
+								sMax: tupleOf(3, num),
+							},
+						}),
+					),
+				},
+			}),
+		),
+	},
+	optional: { materials: arrayOf(obj({ required: petMaterialFields })) },
+})
+
+export const petVariantsShape = obj({
+	required: { generatedFrom: str, models: recordOf(petModelVariantsShape) },
+	optional: { notes: recordOf(str) },
+})

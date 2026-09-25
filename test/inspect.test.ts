@@ -21,6 +21,7 @@ import {
 	toGameCommand,
 } from '../src/inspect.js'
 import { emptyKeychain, emptySticker } from '../src/placement.js'
+import { usesNativeCodec } from './corpus.js'
 
 /**
  * AK-47 | Case Hardened, StatTrak, named, three stickers and a charm.
@@ -238,8 +239,11 @@ describe('url helpers', () => {
  * complete. They are not in `codec.test.ts` because they are the one place this codec deliberately
  * DIVERGES from `cs2-inspect-lib`: the reference refuses them, and that suite exists to assert the two
  * agree. So the behaviour is pinned here, on the package's own surface.
+ *
+ * Gated on `usesNativeCodec` like the corpus: the one-line `cs2-inspect-lib` fallback in
+ * `src/codec.ts` has no unmask step, so under it these would fail rather than skip.
  */
-describe('XOR-masked inspect links', () => {
+describe.skipIf(!usesNativeCodec)('XOR-masked inspect links', () => {
 	/** Mask a payload the way the wild does: XOR every byte, including the frame prefix and trailer. */
 	const mask = (url: string, key: number): string => {
 		const hex = url.split('%20')[1] as string

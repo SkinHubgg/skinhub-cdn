@@ -31,6 +31,7 @@
  * stickers rather than like a bug.
  */
 
+import { C4_DEFINDEX, C4_PAINT_INDEX, C4_WEAPON } from '../c4.js'
 import type { Keychain, Keychains } from '../datasets/keychains.js'
 import type { Skin, Skins } from '../datasets/skins.js'
 import type { Sticker, Stickers } from '../datasets/stickers.js'
@@ -91,13 +92,14 @@ export type ResolvedItem = {
 	skin: Skin | undefined
 	/**
 	 * Which weapon this is, with the vanilla-knife alias resolved to the real item name — the field a
-	 * renderer keys its model path off. `undefined` without `skins`.
+	 * renderer keys its model path off. `undefined` without `skins` - except for the C4 (49, paint 0),
+	 * which resolves to `weapon_c4` with or without them, and without a row (see `../c4.ts`).
 	 */
 	weapon: ResolvedWeapon | undefined
-	/** `AK-47 | Asiimov`, from the row. `undefined` without `skins`. */
+	/** `AK-47 | Asiimov`, from the row. `undefined` without `skins`. `C4 Explosive` for the C4. */
 	name: string | undefined
 	category: SkinCategoryKey | null
-	/** True for the 55 finish-less rows. `false` when the row is unknown. */
+	/** True for the 55 finish-less rows, and for the C4. `false` when the row is unknown. */
 	vanilla: boolean
 	stattrak: boolean
 	/** `null` unless the item is StatTrak™. */
@@ -189,6 +191,10 @@ export const resolveItemWith = (placement: SkinPlacement, finders: ItemFinders):
 			? { keychainId: charm.sticker_id, keychain: finders.keychain(charm.sticker_id), placement: charm }
 			: null
 
+	// The C4 (stickers since 1.41.8.2) has no row in a `skins.json` older than that update - see
+	// `../c4.ts`. Only when the rows have nothing: the exporter's own C4 row, when present, wins.
+	const c4 = !skin && placement.defindex === C4_DEFINDEX && placement.paintindex === C4_PAINT_INDEX
+
 	return {
 		placement,
 		defindex: placement.defindex,
@@ -198,10 +204,10 @@ export const resolveItemWith = (placement: SkinPlacement, finders: ItemFinders):
 		rawFloat,
 		wear,
 		skin,
-		weapon: skin ? (finders.weapon?.(skin) ?? undefined) : undefined,
-		name: skin?.name,
-		category: skin ? skinCategory(skin) : null,
-		vanilla: skin ? isVanilla(skin) : false,
+		weapon: skin ? (finders.weapon?.(skin) ?? undefined) : c4 ? { ...C4_WEAPON, aliased: false } : undefined,
+		name: skin ? skin.name : c4 ? C4_WEAPON.name : undefined,
+		category: skin ? skinCategory(skin) : c4 ? C4_WEAPON.category : null,
+		vanilla: skin ? isVanilla(skin) : c4,
 		stattrak,
 		stattrakCount: stattrak ? (placement.stattrak_count ?? 0) : null,
 		nametag: placement.nametag ?? null,

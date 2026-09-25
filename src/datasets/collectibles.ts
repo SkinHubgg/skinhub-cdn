@@ -16,7 +16,7 @@
 
 import type { DatasetOptions } from '../fetch.js'
 import { fetchCdnData } from '../fetch.js'
-import type { ImageUrl, RarityToken } from './common.js'
+import type { IconColor, ImageUrl, RarityToken } from './common.js'
 
 export type Collectible = {
 	/** A decimal string, `'874'`. Unique across the file. */
@@ -27,6 +27,8 @@ export type Collectible = {
 	/** Non-null on every row of the current export, but nullable in the shared shape. */
 	rarity: RarityToken | null
 	description: string | null
+	/** `#rrggbb` of `image`, or `null` when there is none - see `IconColor`. */
+	color: IconColor
 	/**
 	 * The world model, extension stripped — `5_year_coin`. `null` on the 96 rows that have none.
 	 *

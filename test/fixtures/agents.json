@@ -2,6 +2,7 @@
 	{
 		"team": 2,
 		"image": "",
+		"color": null,
 		"model": "null",
 		"agent_name": "Agent | Default",
 		"id": null,
@@ -11,6 +12,7 @@
 	{
 		"team": 3,
 		"image": "",
+		"color": null,
 		"model": "null",
 		"agent_name": "Agent | Default",
 		"id": null,
@@ -20,6 +22,7 @@
 	{
 		"team": 2,
 		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/characters/customplayer_tm_professional_varf5_png.png",
+		"color": "#b68c43",
 		"model": "tm_professional/tm_professional_varf5",
 		"agent_name": "Bloody Darryl The Strapped | The Professionals",
 		"id": "4613",
@@ -29,6 +32,7 @@
 	{
 		"team": 3,
 		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/characters/customplayer_ctm_st6_variantj_png.png",
+		"color": "#b98155",
 		"model": "ctm_st6/ctm_st6_variantj",
 		"agent_name": "'Blueberries' Buckshot | NSWC SEAL",
 		"id": "4619",
@@ -38,6 +42,7 @@
 	{
 		"team": 3,
 		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/characters/customplayer_ctm_st6_variantl_png.png",
+		"color": "#e5ab1b",
 		"model": "ctm_st6/ctm_st6_variantl",
 		"agent_name": "'Two Times' McCoy | TACP Cavalry",
 		"id": "4680",
@@ -47,6 +52,7 @@
 	{
 		"team": 3,
 		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/characters/customplayer_ctm_swat_variante_png.png",
+		"color": "#3a5b78",
 		"model": "ctm_swat/ctm_swat_variante",
 		"agent_name": "Cmdr. Mae 'Dead Cold' Jamison | SWAT",
 		"id": "4711",

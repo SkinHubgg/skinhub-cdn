@@ -28,16 +28,20 @@ import type { Gloves } from '../src/datasets/gloves.js'
 import type { ItemsGame } from '../src/datasets/items-game.js'
 import type { Keychains } from '../src/datasets/keychains.js'
 import type { MusicKits } from '../src/datasets/music.js'
+import type { PetsJson, PetVariantsJson } from '../src/datasets/pets.js'
 import type { Skins } from '../src/datasets/skins.js'
 import type { Stickers } from '../src/datasets/stickers.js'
 import {
 	agentShape,
 	arrayOf,
+	type Check,
 	collectibleShape,
 	gloveShape,
 	itemsGameShape,
 	keychainShape,
 	musicKitShape,
+	petsShape,
+	petVariantsShape,
 	skinShape,
 	stickerShape,
 	validate,
@@ -47,7 +51,12 @@ const FIXTURES = join(import.meta.dir, 'fixtures')
 
 const readJson = async <T>(dir: string, file: string): Promise<T> => JSON.parse(await readFile(join(dir, file), 'utf8')) as T
 
-const DATASETS = [
+/**
+ * `since` marks a file newer than some exports on disk: the full-export tier skips it when the
+ * directory predates it (the pets files arrived with CS2 1.41.8.2), rather than failing a check of
+ * an export that was never meant to have it. Every other file stays mandatory.
+ */
+const DATASETS: readonly { file: string; shape: Check; since?: string }[] = [
 	{ file: 'skins.json', shape: arrayOf(skinShape) },
 	{ file: 'stickers.json', shape: arrayOf(stickerShape) },
 	{ file: 'collectibles.json', shape: arrayOf(collectibleShape) },
@@ -56,7 +65,9 @@ const DATASETS = [
 	{ file: 'gloves.json', shape: arrayOf(gloveShape) },
 	{ file: 'agents.json', shape: arrayOf(agentShape) },
 	{ file: 'items_game.json', shape: itemsGameShape },
-] as const
+	{ file: 'pets.json', shape: petsShape, since: '1.41.8.2' },
+	{ file: 'petVariants.json', shape: petVariantsShape, since: '1.41.8.2' },
+]
 
 describe('committed fixtures validate against the exported types', () => {
 	for (const { file, shape } of DATASETS) {
@@ -159,6 +170,35 @@ describe('the fixtures actually contain the edge cases the types describe', () =
 		expect(collectibles.some(c => c.image === '')).toBe(true)
 	})
 
+	test('pets: an object, the egg is the only row with an icon, and only adults have a breed', async () => {
+		const pets = await readJson<PetsJson>(FIXTURES, 'pets.json')
+		expect(Array.isArray(pets)).toBe(false)
+		expect(pets.pets.map(pet => pet.id)).toEqual([1, 2, 3, 4, 5])
+		expect(pets.pets.filter(pet => pet.icon !== null).map(pet => pet.kind)).toEqual(['egg'])
+		for (const pet of pets.pets) expect(pet.breed === null).toBe(pet.kind !== 'adult')
+		expect(pets.stages.map(stage => stage.stage)).toEqual(['egg', 'chick', 'pullet', 'hen'])
+	})
+
+	test('petVariants: a model with groups and one with plain materials, both present', async () => {
+		const variants = await readJson<PetVariantsJson>(FIXTURES, 'petVariants.json')
+		const polish = variants.models.chicken_polish
+		const egg = variants.models.egg_pristine
+		expect(polish?.materialGroups.length).toBeGreaterThan(1)
+		expect('materials' in (polish ?? {})).toBe(false)
+		expect(egg?.materialGroups).toEqual([])
+		expect(egg?.materials?.length).toBeGreaterThan(0)
+		// Texture slots are CDN paths, already PNG - never the in-VPK `.vtex` - under `pettex/`, or
+		// `defaults/` for the engine's shared default textures. Both kinds are in the fixture.
+		const textures = [...(polish?.materialGroups ?? []), ...(egg?.materials ?? [])].flatMap(m => Object.values(m.textures))
+		expect(textures.every(path => /^(pettex|defaults)\/.+\.png$/.test(path))).toBe(true)
+		expect(textures.some(path => path.startsWith('pettex/'))).toBe(true)
+		expect(textures.some(path => path.startsWith('defaults/'))).toBe(true)
+		// Shapes are sparse deltas: a bone carries only the channels its characteristic moves.
+		const bones = Object.values(polish?.shapes ?? {}).flatMap(shape => Object.values(shape.bones))
+		expect(bones.length).toBeGreaterThan(0)
+		expect(bones.some(bone => bone.tMin === undefined)).toBe(true)
+	})
+
 	test('items_game is an object with one top-level key, not an array', async () => {
 		const data = await readJson<ItemsGame>(FIXTURES, 'items_game.json')
 		expect(Array.isArray(data)).toBe(false)
@@ -210,8 +250,10 @@ describe.skipIf(!hasFull)('the full export validates against the exported types'
 		'agents.json': 81,
 	}
 
-	for (const { file, shape } of DATASETS) {
-		test(file, async () => {
+	for (const { file, shape, since } of DATASETS) {
+		// The describe body runs to register tests even when the tier is skipped, so FULL may be unset.
+		const absent = since !== undefined && !(FULL && existsSync(join(FULL, file)))
+		test.skipIf(absent)(file, async () => {
 			const data = await readJson<unknown>(FULL as string, file)
 			expect(validate(shape, data, file)).toEqual([])
 

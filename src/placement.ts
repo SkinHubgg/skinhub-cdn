@@ -2,8 +2,9 @@
  * Sticker and charm placement, stored as the GAME's own fields — and the quantisation guard that
  * has to sit between a caller and any encoder.
  *
- * **This module has no external dependencies** - its one import is `./stickerAnchors.js`, a sibling
- * data file with none of its own. It is a separate entry point (`@skinhub/cdn/placement`) from
+ * **This module has no external dependencies** - its imports are `./stickerAnchors.js`, and the
+ * re-exports of `./pets.js` (the `wp_player_pets` row codec) and `./c4.js`, sibling files with no
+ * imports of their own. It is a separate entry point (`@skinhub/cdn/placement`) from
  * `@skinhub/cdn/inspect` for that reason: a server that writes WeaponPaints rows needs the
  * normalisation and the row format but has no use for a protobuf codec, and should not install one.
  *
@@ -30,6 +31,37 @@ export {
 	stickerAnchorFor,
 	stickerAnchorLookup,
 } from './stickerAnchors.js'
+
+/** The C4 takes stickers since 1.41.8.2; its constants, and its sticker slots - see `./c4.ts`. */
+export {
+	C4_DEFINDEX,
+	C4_NAME,
+	C4_PAINT_INDEX,
+	C4_STICKER_SLOTS,
+	C4_WEAPON,
+	C4_WEAPON_ID,
+	isC4,
+	stickerSlotsFor,
+} from './c4.js'
+
+/** The `wp_player_pets` row codec and the stage table it needs - see `./pets.ts`. */
+export {
+	DEFAULT_PET_STAGE,
+	formatPetRow,
+	isPetStage,
+	normalizePetName,
+	PET_NAME_MAX_LENGTH,
+	PET_ROW_COLUMNS,
+	PET_STAGES,
+	type PetSelection,
+	type PetSelectionInput,
+	type PetStage,
+	parsePetRow,
+	petLevelForStage,
+	petStageForLevel,
+	type WeaponPaintsPetRow,
+	WP_PETS_TABLE,
+} from './pets.js'
 
 /** Every wire field below is a protobuf `float`, so the canonical value is float32. */
 export const f32 = (value: number) => (Number.isFinite(value) ? Math.fround(value) : 0)
@@ -131,17 +163,34 @@ export type StickerSlot = (typeof STICKER_SLOTS)[number]
  *
  * Declared here rather than next to the codec so it can be built, validated and written to a
  * database without pulling in a protobuf implementation.
+ *
+ * *** A PET (defindex 4681, CS2 1.41.8.2) USES THE SAME TYPE. *** `petindex` and `upgrade_level` are
+ * the inspect link's own fields 19 and 23; `paintseed` carries the `pet seed` attribute (313), which
+ * is the natural slot for it but an inference - no real pet link has been decoded yet; and the three
+ * per-stage names are `nametag` (chick, `custom name attr`), `nametag2` (pullet) and `nametag3`
+ * (hen), which travel as the repeated field 11 in that order. All four pet fields are OPTIONAL and
+ * absent on every weapon, so no existing placement, link or row changes shape.
  */
 export type SkinPlacement = {
 	defindex: number
 	paintindex: number
+	/** The pattern seed. On a pet, the `pet seed` attribute - see above. */
 	paintseed: number
 	paintwear: number
+	/** The name tag. On a pet, the chick-stage name (`custom name attr`, 111). */
 	nametag?: string | null
+	/** A pet's pullet-stage name (`custom name attr 2`, 328). Only ever set on a pet. */
+	nametag2?: string | null
+	/** A pet's hen-stage name (`custom name attr 3`, 329). Only ever set on a pet. */
+	nametag3?: string | null
 	stattrak?: boolean
 	stattrak_count?: number
 	stickers: StickerPlacement[]
 	keychain: KeychainPlacement | null
+	/** The `pet_definitions` id (`pet id`, 296) - inspect field 19. Absent on anything but a pet. */
+	petindex?: number
+	/** The pet's life stage (`upgrade level`, 268): 0 egg, 1 chick, 2 pullet, 3 hen - inspect field 23. */
+	upgrade_level?: number
 }
 
 /**
@@ -230,6 +279,18 @@ export const makeKeychainPlacement = (placement: Partial<KeychainPlacement>): Ke
 }
 
 /**
+ * A pet's four optional fields, copied only when they carry something: a key that was absent stays
+ * absent, so a weapon placement comes out with exactly the keys it always had and still deep-equals
+ * what a decode of its link returns.
+ */
+const petFields = (placement: SkinPlacement): Partial<SkinPlacement> => ({
+	...(typeof placement.petindex === 'number' ? { petindex: u32(placement.petindex) } : {}),
+	...(typeof placement.upgrade_level === 'number' ? { upgrade_level: u32(placement.upgrade_level) } : {}),
+	...(placement.nametag2 ? { nametag2: placement.nametag2 } : {}),
+	...(placement.nametag3 ? { nametag3: placement.nametag3 } : {}),
+})
+
+/**
  * Normalises a whole item — the finish AND everything stuck to it.
  *
  * The item-level fields bypassed the quantisation the sticker fields go through, and that is a real
@@ -243,7 +304,8 @@ export const makeKeychainPlacement = (placement: Partial<KeychainPlacement>): Ke
  * by the WeaponPaints plugin with `uint.TryParse`, which is the same reason `sticker_id` is
  * quantised: out-of-grammar values are dropped silently rather than rejected loudly.
  *
- * Always returns all five sticker slots, and a charm rather than `null`. Idempotent.
+ * Always returns all five sticker slots, and a charm rather than `null`. Idempotent. The pet fields
+ * (`petindex`, `upgrade_level`, `nametag2`, `nametag3`) are carried only when set - see `petFields`.
  */
 export const makeSkinPlacement = (placement: SkinPlacement): SkinPlacement => ({
 	defindex: u32(placement.defindex),
@@ -258,6 +320,7 @@ export const makeSkinPlacement = (placement: SkinPlacement): SkinPlacement => ({
 		return found ? makeStickerPlacement({ ...found, slot }) : emptySticker(slot)
 	}),
 	keychain: placement.keychain ? makeKeychainPlacement(placement.keychain) : emptyKeychain(),
+	...petFields(placement),
 })
 
 /* -------------------------------------------------------------------------------------------------

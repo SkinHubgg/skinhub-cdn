@@ -41,9 +41,16 @@ import {
 /** Re-exported so `@skinhub/cdn/inspect` is a complete surface on its own. */
 export {
 	type AnchorCatalogSkin,
+	C4_DEFINDEX,
+	C4_NAME,
+	C4_PAINT_INDEX,
+	C4_STICKER_SLOTS,
+	C4_WEAPON,
+	C4_WEAPON_ID,
 	clamp,
 	clampStickerOffset,
 	DEFAULT_KEYCHAIN,
+	DEFAULT_PET_STAGE,
 	DEFAULT_STICKER,
 	DEFAULT_STICKER_SCALE,
 	emptyKeychain,
@@ -51,7 +58,10 @@ export {
 	f32,
 	FIFTH_STICKER_SLOT,
 	formatKeychainRow,
+	formatPetRow,
 	formatStickerRow,
+	isC4,
+	isPetStage,
 	KEYCHAIN_SCHEMA,
 	type KeychainPlacement,
 	makeKeychainPlacement,
@@ -60,9 +70,19 @@ export {
 	migrateLegacyKeychainRow,
 	NO_STICKER_ANCHOR,
 	normalizedFromOffset,
+	normalizePetName,
 	offsetFromNormalized,
 	parseKeychainRow,
+	parsePetRow,
 	parseStickerRow,
+	PET_NAME_MAX_LENGTH,
+	PET_ROW_COLUMNS,
+	PET_STAGES,
+	type PetSelection,
+	type PetSelectionInput,
+	type PetStage,
+	petLevelForStage,
+	petStageForLevel,
 	shortFloat,
 	type SkinPlacement,
 	STICKER_ANCHORS,
@@ -75,8 +95,11 @@ export {
 	STICKER_SLOTS,
 	type StickerPlacement,
 	type StickerSlot,
+	stickerSlotsFor,
 	u32,
 	UINT32_MAX,
+	type WeaponPaintsPetRow,
+	WP_PETS_TABLE,
 } from './placement.js'
 
 /** The wire-level item type, re-exported so a consumer needs no second dependency for the types. */
@@ -125,6 +148,31 @@ const toInspectKeychain = (placement: KeychainPlacement): InspectSticker => ({
 })
 
 /**
+ * *** THE 1.41.8.2 FIELDS ARE READ THROUGH THIS TYPE, NOT OFF `EconItem` DIRECTLY. *** `./codec.ts`
+ * promises that swapping its body for one `export … from 'cs2-inspect-lib'` line is a complete
+ * revert with no edit anywhere else, and that library's `EconItem` predates `customnames`. Naming
+ * the field here keeps that line typechecking; under it the field is simply never present. That is
+ * why `toEconItem` below ALSO sets `customname` to the chick name when it writes `customnames`: the
+ * native encoder ignores `customname` whenever `customnames` is non-empty (the bytes do not change),
+ * and the reference library writes it as the one name it knows, so under the fallback a pet keeps
+ * its chick name and loses only its pullet and hen names.
+ */
+type WithCustomNames = { customnames?: string[] }
+
+/**
+ * A pet's three per-stage names as the repeated field 11 carries them - chick, pullet, hen - or
+ * `undefined` for an item with no second or third name, which keeps the single `customname` it has
+ * always had and so a byte-identical link. Trailing empty names are dropped; an empty name BEFORE a
+ * real one stays, as `""`, because its position is the stage it belongs to.
+ */
+const customNamesOf = (skin: SkinPlacement): string[] | undefined => {
+	if (!skin.nametag2 && !skin.nametag3) return undefined
+	const names = [skin.nametag ?? '', skin.nametag2 ?? '', skin.nametag3 ?? '']
+	while (names[names.length - 1] === '') names.pop()
+	return names
+}
+
+/**
  * A `SkinPlacement` as the protobuf message sees it.
  *
  * Every placement is re-normalised on the way through — this is the choke point the plugin's
@@ -136,28 +184,38 @@ export const toEconItem = (skin: SkinPlacement): EconItem => {
 	const stickers = normalized.stickers.filter(isPlaced).map(toInspectSticker)
 	const keychain =
 		normalized.keychain && isPlaced(normalized.keychain) ? [toInspectKeychain(normalized.keychain)] : undefined
+	const customnames = customNamesOf(normalized)
 
 	return {
 		defindex: normalized.defindex,
 		paintindex: normalized.paintindex,
 		paintseed: normalized.paintseed,
 		paintwear: normalized.paintwear,
+		// Set even when `customnames` is: ignored by the native encoder then, kept by the fallback (see above).
 		customname: normalized.nametag || undefined,
+		...(customnames ? ({ customnames } satisfies WithCustomNames) : {}),
 		killeaterscoretype: normalized.stattrak ? 0 : undefined,
 		killeatervalue: normalized.stattrak ? normalized.stattrak_count : undefined,
 		stickers: stickers.length > 0 ? stickers : undefined,
+		petindex: normalized.petindex,
 		keychains: keychain,
+		upgrade_level: normalized.upgrade_level,
 	}
 }
 
 /** The inverse. Always returns all five sticker slots, empty ones included. */
-export const fromEconItem = (item: EconItem): SkinPlacement =>
-	makeSkinPlacement({
+export const fromEconItem = (item: EconItem): SkinPlacement => {
+	const names = (item as EconItem & WithCustomNames).customnames
+	return makeSkinPlacement({
 		defindex: item.defindex,
 		paintindex: item.paintindex,
 		paintseed: item.paintseed,
 		paintwear: item.paintwear,
-		nametag: item.customname ?? null,
+		// Several names: the FIRST is the chick's (`custom name attr`), so it is the nametag. One name:
+		// exactly what this has always returned, `""` included.
+		nametag: names ? names[0] || null : (item.customname ?? null),
+		nametag2: names?.[1] || null,
+		nametag3: names?.[2] || null,
 		stattrak: typeof item.killeaterscoretype === 'number',
 		stattrak_count: item.killeatervalue ?? 0,
 		stickers: STICKER_SLOTS.map(slot => {
@@ -165,7 +223,10 @@ export const fromEconItem = (item: EconItem): SkinPlacement =>
 			return found ? makeStickerPlacement({ ...found, slot }) : emptySticker(slot)
 		}),
 		keychain: item.keychains?.[0] ? makeKeychainPlacement({ ...item.keychains[0], slot: 0 }) : emptyKeychain(),
+		petindex: item.petindex,
+		upgrade_level: item.upgrade_level,
 	})
+}
 
 /** `steam://rungame/730/…+csgo_econ_action_preview <hex>` for the item as configured. */
 export const buildInspectUrl = (skin: SkinPlacement): string => createInspectUrl(toEconItem(skin))

@@ -24,14 +24,25 @@
  * **`access-control-allow-origin` is absent from the origin's responses**, so every test here works
  * from a server and would not from a browser. That is an origin configuration rather than anything
  * this package does — nothing in the API is designed around it. See the note in `src/catalog.ts`.
+ *
+ * **2026-09-24: every request here now carries `Origin: https://skinhub.gg`** (see `LIVE_ORIGIN`
+ * below), because the no-Origin requests this suite used to send were a hazard to the site, not just
+ * a gap in the test. The pet files (`pets.json`, `petVariants.json`, new with CS2 1.41.8.2) are
+ * checked the same opportunistic way as the seven lists, and the catalogue pins count the C4's
+ * vanilla row as `+ c4` so they hold before and after the export that adds it is published.
+ *
+ * Point it at another origin - the local dev CDN, a staging bucket - with
+ * `SKINHUB_CDN_URL=<origin> bun run test:live`; the suite title says which origin it ran against.
  */
 
-import { describe, expect, test } from 'bun:test'
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import { C4_DEFINDEX } from '../src/c4.js'
 import { clearDefaultCache } from '../src/cache.js'
 import { loadSkinIndex } from '../src/catalog.js'
+import { fetchPets, fetchPetVariants } from '../src/datasets/pets.js'
 import type { Skin } from '../src/datasets/skins.js'
 import { marketHashName } from '../src/query/index.js'
-import { dataUrl, SKINHUB_CDN_DEFAULT_ORIGIN } from '../src/config.js'
+import { dataUrl, resolveCdnOrigin } from '../src/config.js'
 import { fetchAgents } from '../src/datasets/agents.js'
 import { fetchCollectibles } from '../src/datasets/collectibles.js'
 import { fetchGloves } from '../src/datasets/gloves.js'
@@ -50,6 +61,8 @@ import {
 	itemsGameShape,
 	keychainShape,
 	musicKitShape,
+	petsShape,
+	petVariantsShape,
 	skinShape,
 	stickerShape,
 	validate,
@@ -57,7 +70,44 @@ import {
 
 const LIVE = process.env.SKINHUB_CDN_LIVE === '1'
 
-describe.skipIf(!LIVE)(`live CDN (${SKINHUB_CDN_DEFAULT_ORIGIN})`, () => {
+/**
+ * *** EVERY LIVE REQUEST SENDS AN `Origin`. *** `cdn.skinhub.gg` answers `vary: Origin`, but
+ * Cloudflare does not key its cache on it, so the first copy an edge caches is the copy every browser
+ * gets. A copy warmed by a request WITHOUT an `Origin` - a server-side test run, curl - carries no
+ * `access-control-allow-origin`, and every browser `fetch()` of that file fails until the edge
+ * expires it. This suite runs from a server and pulls every data file, so it must never be the
+ * request that warms one.
+ *
+ * The package's fetch layer reads `globalThis.fetch` at call time, so wrapping it for the suite
+ * covers every helper, `loadSkinIndex` included, without touching the code under test.
+ */
+const LIVE_ORIGIN = 'https://skinhub.gg'
+
+let unwrappedFetch: typeof globalThis.fetch | undefined
+
+/** `globalThis.fetch` with `Origin` set on every request that does not already name one. */
+const fetchWithOrigin = (realFetch: typeof globalThis.fetch): typeof globalThis.fetch => {
+	const wrapped = (input: Parameters<typeof globalThis.fetch>[0], init?: RequestInit) => {
+		const headers = new Headers(input instanceof Request ? input.headers : undefined)
+		new Headers(init?.headers).forEach((value, name) => {
+			headers.set(name, value)
+		})
+		if (!headers.has('origin')) headers.set('origin', LIVE_ORIGIN)
+		return realFetch(input, { ...init, headers })
+	}
+	return Object.assign(wrapped, realFetch)
+}
+
+describe.skipIf(!LIVE)(`live CDN (${resolveCdnOrigin()})`, () => {
+	beforeAll(() => {
+		unwrappedFetch = globalThis.fetch
+		globalThis.fetch = fetchWithOrigin(unwrappedFetch)
+	})
+
+	afterAll(() => {
+		if (unwrappedFetch) globalThis.fetch = unwrappedFetch
+	})
+
 	test('manifest.json is served as JSON', async () => {
 		const manifest = await fetchCdnJson<Record<string, unknown>>('manifest.json', { cache: false })
 		expect(typeof manifest).toBe('object')
@@ -102,6 +152,29 @@ describe.skipIf(!LIVE)(`live CDN (${SKINHUB_CDN_DEFAULT_ORIGIN})`, () => {
 		}, 120_000)
 	}
 
+	// Objects rather than row arrays, and new with CS2 1.41.8.2: until the export that writes them is
+	// published they 404, which is reported exactly like a missing list above.
+	const petFiles = [
+		{ file: 'pets.json', fetch: fetchPets, shape: petsShape },
+		{ file: 'petVariants.json', fetch: fetchPetVariants, shape: petVariantsShape },
+	] as const
+
+	for (const { file, fetch, shape } of petFiles) {
+		test(`data/${file} - validates if served, reports cleanly if not`, async () => {
+			clearDefaultCache()
+			try {
+				const data = await fetch({ cache: false })
+				expect(validate(shape, data, file)).toEqual([])
+				console.log(`  ✓ ${file}: validates`)
+			} catch (error) {
+				if (!isCdnError(error)) throw error
+				expect(error.status).toBe(404)
+				expect(error.url).toBe(dataUrl(file))
+				console.log(`  - ${file}: HTTP 404 (${error.contentType}) - not uploaded yet`)
+			}
+		}, 120_000)
+	}
+
 	test('a missing key surfaces as a 404 CdnError, not a JSON parse error', async () => {
 		const error = await fetchCdnJson('data/definitely-not-a-file.json', { cache: false }).catch(e => e)
 		expect(isCdnError(error)).toBe(true)
@@ -124,8 +197,11 @@ describe.skipIf(!LIVE)(`live CDN (${SKINHUB_CDN_DEFAULT_ORIGIN})`, () => {
 		clearDefaultCache()
 		const index = await loadSkinIndex()
 
-		expect(index.skins.length).toBe(2161)
-		expect(index.weaponTypes().length).toBe(63)
+		// 1 once the CS2 1.41.8.2 export is live (the C4's vanilla row), 0 before - as in test/query.test.ts.
+		const c4 = index.skins.filter(skin => skin.weapon.weapon_id === C4_DEFINDEX).length
+		expect(c4).toBeLessThanOrEqual(1)
+		expect(index.skins.length).toBe(2161 + c4)
+		expect(index.weaponTypes().length).toBe(63 + c4)
 		expect(index.weaponTypes('knives').length).toBe(20)
 		expect(index.weaponTypes('gloves').length).toBe(8)
 		expect(index.forWeapon(7).length).toBeGreaterThan(50)

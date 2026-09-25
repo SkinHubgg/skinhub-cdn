@@ -329,6 +329,8 @@ describe.skipIf(!hasFull)('every row survives the whole loop', () => {
 			}
 			resolved++
 		}
-		expect(resolved).toBe(2161)
+		// Every row, however many the export has - 2,161, plus the C4's vanilla row from 1.41.8.2 on.
+		expect(resolved).toBe(skins.length)
+		expect(resolved).toBeGreaterThanOrEqual(2161)
 	}, 60_000)
 })

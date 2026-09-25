@@ -85,6 +85,7 @@
 		},
 		"legacy_model": true,
 		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/weapons/base_weapons/weapon_bayonet_png.png",
+		"color": "#909090",
 		"original": {
 			"name": "weapon_bayonet"
 		}
@@ -125,6 +126,7 @@
 		},
 		"legacy_model": true,
 		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/weapons/base_weapons/weapon_knife_css_png.png",
+		"color": "#6b6b6b",
 		"original": {
 			"name": "weapon_knife_css"
 		}
@@ -186,6 +188,7 @@
 		},
 		"legacy_model": false,
 		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/weapon_knife_butterfly_am_gamma_doppler_phase3_light_png.png",
+		"color": "#34994c",
 		"original": {
 			"name": "weapon_knife_butterfly"
 		}
@@ -242,6 +245,7 @@
 		},
 		"legacy_model": false,
 		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/weapon_knife_cord_am_blackpearl_marbleized_light_png.png",
+		"color": "#3a3a3a",
 		"original": {
 			"name": "weapon_knife_cord"
 		}
@@ -299,6 +303,7 @@
 		},
 		"legacy_model": true,
 		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/weapon_m4a1_cu_m4a1_howling_light_png.png",
+		"color": "#c8492d",
 		"original": {
 			"name": "weapon_m4a1"
 		}
@@ -355,6 +360,7 @@
 		},
 		"legacy_model": false,
 		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/weapon_knife_cord_am_doppler_phase4_light_png.png",
+		"color": "#414da8",
 		"original": {
 			"name": "weapon_knife_cord"
 		}
@@ -513,6 +519,7 @@
 		},
 		"legacy_model": false,
 		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/weapon_sawedoff_sp_spray_desert_sage_light_png.png",
+		"color": "#b2a689",
 		"original": {
 			"name": "weapon_sawedoff"
 		}
@@ -580,6 +587,7 @@
 		},
 		"legacy_model": false,
 		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/weapon_mp9_soe_ddpat_swirl_bw_light_png.png",
+		"color": "#4e4e4e",
 		"original": {
 			"name": "weapon_mp9"
 		}
@@ -653,6 +661,7 @@
 		},
 		"legacy_model": false,
 		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/weapon_fiveseven_hy_overpass_paintover_teal_light_png.png",
+		"color": "#3b5e6b",
 		"original": {
 			"name": "weapon_fiveseven"
 		}
@@ -730,6 +739,7 @@
 		},
 		"legacy_model": false,
 		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/sporty_gloves_sporty_hunter_light_png.png",
+		"color": "#c58e4f",
 		"original": {
 			"name": "sporty_gloves"
 		}
@@ -797,6 +807,7 @@
 		},
 		"legacy_model": false,
 		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/weapon_m4a1_hye_blue_m4a4_light_png.png",
+		"color": "#61708c",
 		"original": {
 			"name": "weapon_m4a1"
 		}
@@ -866,6 +877,7 @@
 		},
 		"legacy_model": true,
 		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/weapon_fiveseven_cu_fiveseven_banana_light_png.png",
+		"color": "#f6d61e",
 		"original": {
 			"name": "weapon_fiveseven"
 		}
@@ -938,6 +950,7 @@
 		},
 		"legacy_model": false,
 		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/motorcycle_gloves_motorcycle_choco_boom_light_png.png",
+		"color": "#d08e66",
 		"original": {
 			"name": "motorcycle_gloves"
 		}
@@ -1011,6 +1024,7 @@
 		},
 		"legacy_model": false,
 		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/weapon_taser_zeus_tosai_light_png.png",
+		"color": "#df5e3d",
 		"original": {
 			"name": "weapon_taser"
 		}
@@ -1084,6 +1098,7 @@
 		},
 		"legacy_model": true,
 		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/weapon_fiveseven_aq_five_seven_scumbria_light_png.png",
+		"color": "#414141",
 		"original": {
 			"name": "weapon_fiveseven"
 		}
@@ -1157,6 +1172,7 @@
 		},
 		"legacy_model": true,
 		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/weapon_mp9_am_mp9_nitrogen_light_png.png",
+		"color": "#b04536",
 		"original": {
 			"name": "weapon_mp9"
 		}
@@ -1280,6 +1296,7 @@
 		},
 		"legacy_model": true,
 		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/weapon_m4a1_silencer_gs_m4a1s_operator_light_png.png",
+		"color": "#346f85",
 		"original": {
 			"name": "weapon_m4a1_silencer"
 		}
@@ -1314,6 +1331,7 @@
 		},
 		"legacy_model": false,
 		"image": "https://cdn.skinhub.gg/econicons/panorama/images/econ/weapons/base_weapons/weapon_deagle_png.png",
+		"color": "#5b5b5b",
 		"original": {
 			"name": "weapon_deagle"
 		}
@@ -1431,6 +1449,7 @@
 		},
 		"legacy_model": true,
 		"image": "https://cdn.skinhub.gg/skinicons/panorama/images/econ/default_generated/weapon_bayonet_aq_oiled_light_png.png",
+		"color": "#bbb071",
 		"original": {
 			"name": "weapon_bayonet"
 		}

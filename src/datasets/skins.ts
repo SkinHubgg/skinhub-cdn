@@ -28,11 +28,15 @@
  * One field is a trap rather than a shape: **`souvenir` does not mean a Souvenir version exists.**
  * It is `true` on 1,456 rows including `AK-47 | Asiimov`, and it contradicts `stattrak` on 698 of
  * them. Use `canBeSouvenir` from `@skinhub/cdn/query`, which derives it from the drop source.
+ *
+ * **From CS2 1.41.8.2 there is one more row**, the C4's vanilla row (`skin-vanilla-weapon_c4`,
+ * category `loadoutslot_equipment`), so every count above that covers it - rows, vanilla rows,
+ * vanilla guns, equipment, weapon types - is one higher on an export made after that update.
  */
 
 import { fetchCdnData } from '../fetch.js'
 import type { DatasetOptions } from '../fetch.js'
-import type { ImageUrl, Open } from './common.js'
+import type { IconColor, ImageUrl, Open } from './common.js'
 
 /** The eight Doppler / Gamma Doppler variants the export names. */
 export type SkinPhase = Open<
@@ -146,6 +150,8 @@ export type Skin = {
 	/** Whether the finish renders on the pre-2018 model. */
 	legacy_model: boolean
 	image: ImageUrl
+	/** `#rrggbb` of `image`, or `null` when there is none - see `IconColor`. */
+	color: IconColor
 	/** `{ name: 'weapon_ak47' }` — the untranslated item name. */
 	original: { name: string }
 	/** Present on 181 rows. Absent, never null, on the other 1,980. */

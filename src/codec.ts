@@ -37,6 +37,25 @@
  * - **Charms ride field 20 (`keychains`) as the same submessage as a sticker**, so `pattern` is the
  *   charm's seed and `offset_z` is a real coordinate rather than padding.
  *
+ * ## What CS2 1.41.8.2 (2026-09-22, the pets update) changed, and how this module takes it
+ *
+ * Valve's `cstrike15_gcmessages.proto` at GameTracking-CS2 `10f3693c` changed three things in
+ * `CEconItemPreviewDataBlock`:
+ *
+ * - `optional string customname = 11` became `repeated string customnames = 11` - one name per pet
+ *   life stage (`custom name attr`, `... 2`, `... 3`: chick, pullet, hen). The wire bytes of one name
+ *   are identical under both declarations, which is why nothing broke - but a reader that treats the
+ *   field as optional keeps only the LAST name. `cs2-inspect-lib@4.1.0` does exactly that.
+ * - `optional uint32 pet_food_expiration_date = 24` (new).
+ * - `optional bytes blobdata = 25` (new; what it carries is not documented anywhere - pet book
+ *   achievements are a guess).
+ *
+ * The rule this module follows for all three: **for every payload the reference library reads
+ * without losing data, the decoded object is still identical to its output**. So `customnames`
+ * appears only when the link carries MORE than one name (with one name, `customname` alone says
+ * everything and the reference agrees), `customname` keeps its old meaning - the last name on the
+ * wire - and 24/25 appear only when present. `test/codec.test.ts` still holds for the whole corpus.
+ *
  * The framing is a `0x00` prefix, the protobuf bytes, and four bytes of checksum:
  *
  * ```
@@ -110,7 +129,17 @@ export type EconItem = {
 	paintseed: number
 	killeaterscoretype?: number
 	killeatervalue?: number
+	/** Field 11. With several names on the wire this is the LAST one - the pre-1.41.8.2 reading. */
 	customname?: string
+	/**
+	 * Field 11 read as what it is since 1.41.8.2, `repeated string customnames`, in wire order.
+	 *
+	 * On decode it is present only when the link carries two or more names; a one-name link decodes
+	 * to `customname` alone, exactly as before (see the module comment). On encode, a non-empty array
+	 * here is what gets written and `customname` is ignored - every entry, empty strings included,
+	 * because the position is the pet life stage the name belongs to.
+	 */
+	customnames?: string[]
 	stickers?: Sticker[]
 	inventory?: number
 	origin?: number
@@ -124,6 +153,10 @@ export type EconItem = {
 	style?: number
 	variations?: Sticker[]
 	upgrade_level?: number
+	/** Field 24, new in 1.41.8.2. A timestamp, by its name and the pet food lifecycle - not observed. */
+	pet_food_expiration_date?: number
+	/** Field 25, new in 1.41.8.2. Opaque bytes; nothing public says what they hold. */
+	blobdata?: Uint8Array
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -203,6 +236,23 @@ const validateEconItem = (item: EconItem): string[] => {
 		else if (item.customname.length > MAX_CUSTOM_NAME_LENGTH) {
 			errors.push('customname must be 100 characters or less')
 		}
+	}
+	if (item.customnames !== undefined) {
+		if (!Array.isArray(item.customnames)) errors.push('customnames must be an array of strings')
+		else {
+			item.customnames.forEach((name, index) => {
+				if (typeof name !== 'string') errors.push(`customnames[${index}] must be a string`)
+				else if (name.length > MAX_CUSTOM_NAME_LENGTH) {
+					errors.push(`customnames[${index}] must be 100 characters or less`)
+				}
+			})
+		}
+	}
+	if (item.pet_food_expiration_date !== undefined && notUint(item.pet_food_expiration_date)) {
+		errors.push('pet_food_expiration_date must be a non-negative number')
+	}
+	if (item.blobdata !== undefined && !(item.blobdata instanceof Uint8Array)) {
+		errors.push('blobdata must be a Uint8Array')
 	}
 	if (item.entindex !== undefined && typeof item.entindex !== 'number') {
 		errors.push('entindex must be a number (can be negative)')
@@ -465,8 +515,14 @@ const encodeItemData = (item: EconItem): Uint8Array => {
 		writer.writeTag(10, 0)
 		writer.writeVarint(item.killeatervalue)
 	}
-	// Truthiness, not `!== undefined`: an empty nametag is omitted rather than sent as "".
-	if (item.customname) {
+	// The repeated form (1.41.8.2) writes every entry, "" included: the index is the pet life stage.
+	// The single form keeps truthiness, not `!== undefined`: an empty nametag is omitted, not sent as "".
+	if (item.customnames && item.customnames.length > 0) {
+		for (const name of item.customnames) {
+			writer.writeTag(11, 2)
+			writer.writeString(name)
+		}
+	} else if (item.customname) {
 		writer.writeTag(11, 2)
 		writer.writeString(item.customname)
 	}
@@ -523,6 +579,15 @@ const encodeItemData = (item: EconItem): Uint8Array => {
 	if (typeof item.upgrade_level !== 'undefined') {
 		writer.writeTag(23, 0)
 		writer.writeVarint(item.upgrade_level)
+	}
+	if (typeof item.pet_food_expiration_date !== 'undefined') {
+		writer.writeTag(24, 0)
+		writer.writeVarint(item.pet_food_expiration_date)
+	}
+	// Presence, not length: `optional bytes` set to zero bytes is still set.
+	if (typeof item.blobdata !== 'undefined') {
+		writer.writeTag(25, 2)
+		writer.writeLengthDelimited(item.blobdata)
 	}
 
 	return writer.getBytes()
@@ -921,9 +986,17 @@ const decodeFramedHex = (input: string): EconItem => {
 			case 10:
 				item.killeatervalue = reader.readVarint()
 				break
-			case 11:
-				item.customname = reader.readString()
+			case 11: {
+				// `repeated` since 1.41.8.2. `customname` stays the last name (the old reading), and the
+				// array only comes into being at the SECOND name - see the module comment for why.
+				const name = reader.readString()
+				if (item.customname !== undefined) {
+					item.customnames ??= [item.customname]
+					item.customnames.push(name)
+				}
+				item.customname = name
 				break
+			}
 			case 12:
 				item.stickers?.push(decodeSticker(new Reader(reader.readBytes())))
 				break
@@ -959,6 +1032,12 @@ const decodeFramedHex = (input: string): EconItem => {
 				break
 			case 23:
 				item.upgrade_level = reader.readVarint()
+				break
+			case 24:
+				item.pet_food_expiration_date = reader.readVarint()
+				break
+			case 25:
+				item.blobdata = reader.readBytes()
 				break
 			default:
 				reader.skipField(wireType)

@@ -22,6 +22,7 @@ import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { ItemsGame } from '../src/datasets/items-game.js'
+import { C4_DEFINDEX } from '../src/c4.js'
 import type { Skin, Skins } from '../src/datasets/skins.js'
 import {
 	createSkinIndex,
@@ -818,13 +819,22 @@ describe.skipIf(!hasFull)('invariants the return types depend on', () => {
 
 describe.skipIf(!hasFull)('the figures quoted in the doc comments', () => {
 	let skins: Skins = []
+	/**
+	 * 1 on an export from CS2 1.41.8.2 on, 0 before it. The doc figures describe the catalogue before
+	 * the C4 got its one vanilla row (`equipment`, paint '0' - see `src/c4.ts`); every count that row
+	 * lands in is pinned as `figure + c4`, so this tier holds on both sides of that update and says
+	 * exactly which figures the row moves.
+	 */
+	let c4 = 0
 
 	test('load', async () => {
 		skins = await readJson<Skins>(FULL as string, 'skins.json')
+		c4 = skins.filter(skin => skin.weapon.weapon_id === C4_DEFINDEX).length
+		expect(c4).toBeLessThanOrEqual(1)
 	})
 
 	test('row and category counts', () => {
-		expect(skins.length).toBe(2161)
+		expect(skins.length).toBe(2161 + c4)
 		expect(Object.fromEntries(listCategories(skins).map(row => [row.key, row.skinCount]))).toEqual({
 			rifles: 500,
 			smgs: 311,
@@ -832,7 +842,7 @@ describe.skipIf(!hasFull)('the figures quoted in the doc comments', () => {
 			pistols: 450,
 			knives: 576,
 			gloves: 94,
-			equipment: 8,
+			equipment: 8 + c4,
 		})
 		expect(knifeSkins(skins).length).toBe(576)
 		expect(gloveSkins(skins).length).toBe(94)
@@ -843,7 +853,7 @@ describe.skipIf(!hasFull)('the figures quoted in the doc comments', () => {
 		// The figures the `weaponDefindexes` doc quotes: 63 entries, the 20 aliases dropped, and the
 		// 8 glove ids present without `gloves.json`.
 		const map = weaponDefindexes(skins)
-		expect(Object.keys(map).length).toBe(63)
+		expect(Object.keys(map).length).toBe(63 + c4)
 		expect(Object.keys(map).filter(id => id.startsWith('sfui_')).length).toBe(0)
 		expect(new Set(skins.map(skin => skin.weapon.id)).size - Object.keys(map).length).toBe(20)
 
@@ -870,7 +880,7 @@ describe.skipIf(!hasFull)('the figures quoted in the doc comments', () => {
 	})
 
 	test('weapon type counts', () => {
-		expect(listWeaponTypes(skins).length).toBe(63)
+		expect(listWeaponTypes(skins).length).toBe(63 + c4)
 		expect(Object.fromEntries(SKIN_CATEGORIES.map(key => [key, listWeaponTypes(skins, key).length]))).toEqual({
 			rifles: 11,
 			smgs: 7,
@@ -878,10 +888,10 @@ describe.skipIf(!hasFull)('the figures quoted in the doc comments', () => {
 			pistols: 10,
 			knives: 20,
 			gloves: 8,
-			equipment: 1,
+			equipment: 1 + c4,
 		})
 		expect(listGunTypes(skins).length).toBe(34)
-		expect(new Set(skins.map(skin => skin.weapon.id)).size).toBe(83)
+		expect(new Set(skins.map(skin => skin.weapon.id)).size).toBe(83 + c4)
 	})
 
 	test('the per-weapon figures the doc comments quote', () => {
@@ -902,11 +912,11 @@ describe.skipIf(!hasFull)('the figures quoted in the doc comments', () => {
 	})
 
 	test('vanilla, phase and collision counts', () => {
-		expect(vanillaSkins(skins).length).toBe(55)
+		expect(vanillaSkins(skins).length).toBe(55 + c4)
 		expect(skins.filter(skin => skin.paint_index === null).length).toBe(20)
-		expect(skins.filter(skin => skin.paint_index === '0').length).toBe(35)
+		expect(skins.filter(skin => skin.paint_index === '0').length).toBe(35 + c4)
 		expect(skins.filter(skin => skin.phase !== undefined).length).toBe(181)
-		expect(new Set(skins.map(skin => skin.name)).size).toBe(2009)
+		expect(new Set(skins.map(skin => skin.name)).size).toBe(2009 + c4)
 		expect(skins.filter(skin => skin.collections?.length === 0).length).toBe(651)
 	})
 

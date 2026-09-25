@@ -16,6 +16,12 @@
  * |   94 | `sfui_invpanel_filter_gloves`            | `gloves`    |
  * |    8 | `loadoutslot_equipment`                  | `equipment` |
  *
+ * **From CS2 1.41.8.2 the export carries one more row: the C4's vanilla row** (`weapon_c4`,
+ * defindex 49, paint `'0'`, `loadoutslot_equipment`), because the C4 now takes stickers. It lands in
+ * `equipment` beside the Zeus and adds exactly one to the row, weapon-type, vanilla and equipment
+ * counts quoted in this layer's comments - which were measured before it. `../c4.ts` has the C4 as
+ * constants for a consumer still holding an older `skins.json`.
+ *
  * **Gloves and knives are already in there.** A consumer building a picker needs one 4.2 MB fetch,
  * not three — `gloves.json` is a 95-row side table that adds nothing `skins.json` does not already
  * carry except a `Gloves | Default` row with `weapon_defindex: 0`. That is why every function here
@@ -98,7 +104,7 @@ export const isKnife = (skin: Skin): boolean => skin.category.id === SKIN_CATEGO
  */
 export const isGlove = (skin: Skin): boolean => skin.category.id === SKIN_CATEGORY_IDS.gloves
 
-/** `true` for the 8 Zeus rows. */
+/** `true` for the 8 Zeus rows, and the C4's vanilla row on an export from 1.41.8.2 on. */
 export const isEquipment = (skin: Skin): boolean => skin.category.id === SKIN_CATEGORY_IDS.equipment
 
 /** Rifles, SMGs, heavy and pistols — everything you shoot with. 1,483 rows. */
