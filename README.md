@@ -800,7 +800,7 @@ CREATE TABLE IF NOT EXISTS wp_player_pets (
   steamid     VARCHAR(18)  NOT NULL PRIMARY KEY,
   pet_id      INT          NOT NULL,
   pet_stage   TINYINT      NOT NULL DEFAULT 3,  -- 0 egg, 1 chick, 2 pullet, 3 hen
-  pet_variant INT          NULL,                -- material group override; NULL = the seed decides
+  pet_variant INT          NULL,                -- item style = material group; NULL = default group
   pet_seed    INT UNSIGNED NOT NULL DEFAULT 0,
   pet_name    VARCHAR(32)  NULL
 )

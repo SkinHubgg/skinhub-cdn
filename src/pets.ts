@@ -257,7 +257,7 @@ export const petModelVariants = (
  *     steamid     VARCHAR(18)  NOT NULL PRIMARY KEY,   -- one pet per player; pets are "noteam"
  *     pet_id      INT          NOT NULL,               -- pet_definitions id
  *     pet_stage   TINYINT      NOT NULL DEFAULT 3,     -- upgrade level: 0 egg, 1 chick, 2 pullet, 3 hen
- *     pet_variant INT          NULL,                   -- material group index override; NULL = the seed decides
+ *     pet_variant INT          NULL,                   -- item style = material group index; NULL = no style, the default group
  *     pet_seed    INT UNSIGNED NOT NULL DEFAULT 0,     -- the "pet seed" attribute
  *     pet_name    VARCHAR(32)  NULL                    -- name tag for the current stage
  *   )
@@ -284,7 +284,7 @@ export type PetSelection = {
 	/** The `pet_definitions` id. */
 	petId: number
 	stage: PetStage
-	/** A material group index that overrides the seed's pick, or `null` to let the seed decide. */
+	/** The item's style: a material group index, or `null` for no style (the model's default group). The seed never picks the colour. */
 	variant: number | null
 	/** The `pet seed` attribute, uint32. */
 	petSeed: number
@@ -395,7 +395,7 @@ export const normalizePetName = (name: string | null | undefined): string | null
  * `INT UNSIGNED` `pet_seed` - for the same reason `makeSkinPlacement` does it: the plugin drops a
  * value it cannot parse rather than failing loudly, and MySQL refuses or silently caps one that does
  * not fit. An unknown stage string falls back to the column default (hen). A `variant` that is
- * absent, negative or not a number is `NULL`, which means "the seed decides".
+ * absent, negative or not a number is `NULL`, which means "no style": the default colour group.
  *
  * **`null` in, `null` out: no pet means DELETE the row.** "No pet" is the absence of a row - the
  * plugin deletes it on `!pet off` - so there is no row to format, and this is the inverse of
