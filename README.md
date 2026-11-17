@@ -43,6 +43,7 @@ built-ins, no top-level `await` on import, no global state you did not ask for.
 - [Inspect links and placement](#inspect-links-and-placement)
 - [Pets](#pets)
 - [The C4](#the-c4)
+- [Rendering images](#rendering-images)
 - [API reference](#api-reference)
 - [Development](#development)
 
@@ -475,7 +476,7 @@ a 27 KB HTML page**, not JSON. Code that goes straight to `response.json()` repo
 
 | import | contents |
 |---|---|
-| `@skinhub/cdn` | everything: config, cache, errors, fetch, every dataset helper, the query layer, the inspect codec and the placement layer |
+| `@skinhub/cdn` | everything: config, cache, errors, fetch, every dataset helper, the query layer, the inspect codec, the placement layer and the image client |
 | `@skinhub/cdn/skins` | `fetchSkins` + the skin types |
 | `@skinhub/cdn/stickers` `…/gloves` `…/agents` `…/music` `…/keychains` `…/collectibles` `…/items-game` | one dataset each |
 | `@skinhub/cdn/pets` | `fetchPets` / `fetchPetVariants`, the pet types, the stage table and the `wp_player_pets` row codec |
@@ -483,6 +484,7 @@ a 27 KB HTML page**, not JSON. Code that goes straight to `response.json()` repo
 | `@skinhub/cdn/catalog` | `loadSkinIndex` / `loadCatalog` - fetch and index in one call |
 | `@skinhub/cdn/placement` | placement types, normalisation, the WeaponPaints row formats (skins and pets), the C4 constants |
 | `@skinhub/cdn/inspect` | inspect-link encode/decode - works in a browser |
+| `@skinhub/cdn/image` | `imageUrl` / `fetchImage` for `api.skinhub.gg/image` - carries the codec, no CDN layer |
 
 **This package has no runtime dependencies.** Nothing to audit, nothing to resolve, and nothing that
 needs a Node built-in.
@@ -504,7 +506,9 @@ Measured with a real bundler against `dist`:
 | `loadSkinIndex` from `@skinhub/cdn/catalog` | browser | 14.8 KB - this one does fetch, by design |
 | `buildInspectUrl` from `@skinhub/cdn/inspect` | browser | 18.3 KB |
 | `buildInspectUrl` from `@skinhub/cdn/inspect` | node | 18.3 KB |
-| `import * as cdn` from `@skinhub/cdn` | browser | 75.6 KB - everything, because a namespace import keeps everything |
+| `imageUrl` from `@skinhub/cdn/image` | browser | 21.3 KB - the codec is most of it |
+| `fetchImage` from `@skinhub/cdn/image` | browser | 26.2 KB |
+| `import * as cdn` from `@skinhub/cdn` | browser | 85.7 KB - everything, because a namespace import keeps everything |
 
 ### The inspect codec used to be server-only. It is not any more.
 
@@ -868,6 +872,71 @@ with or without `skins`; when the list has the exporter's row, that row is what 
 
 ---
 
+## Rendering images
+
+`api.skinhub.gg/image` turns an item into a PNG or WebP on a transparent background. It needs an API
+key from [skinhub.gg/client](https://skinhub.gg/client): one credit per render, and cache hits, `304`s
+and errors are free. `@skinhub/cdn/image` builds the URL and fetches it. The option names are the
+endpoint's own query parameters (`w`, `h`, `st`, `side`, `map`, ...), so the endpoint's docs read the
+same as these types.
+
+```ts
+import { fetchImage, imageUrl, isImageError, makeStickerPlacement } from '@skinhub/cdn'
+
+// For an <img>: the key has to ride the URL, so only do this where the page is already public.
+imageUrl({ weapon: 'weapon_ak47', paint: 44, float: 0.02, seed: 661, w: 800, h: 800, format: 'webp', key })
+// https://api.skinhub.gg/image?weapon=weapon_ak47&paint=44&float=0.02&seed=661&w=800&h=800&format=webp&key=...
+
+// Server-side: the key goes in `Authorization: Bearer`, never the URL.
+const image = await fetchImage({
+  // Stickers and a charm only reach the endpoint as an inspect link. Pass the item and it is encoded for you.
+  item: {
+    defindex: 7, paintindex: 44, paintseed: 661, paintwear: 0.02,
+    stickers: [makeStickerPlacement({ slot: 0, sticker_id: 7691, offset_x: 0.05 })],
+    keychain: { slot: 0, sticker_id: 21, offset_x: 0, offset_y: 0, offset_z: 0, pattern: 41, wrapped_sticker: 0 },
+  },
+  w: 1024, h: 1024, side: 'right', yaw: 20, pitch: -12,
+  key: process.env.SKINHUB_KEY,
+})
+
+image.bytes       // Uint8Array
+image.cache       // 'hit' | 'miss' | 'coalesced' | ...
+image.charged     // true only when it rendered
+image.problems    // parameters the endpoint could not read - check these while integrating
+image.etag        // send back as `ifNoneMatch` for a free 304 (`notModified: true`, no bytes)
+```
+
+Item naming takes any of `weapon` + `paint`, `weapon` + `skin` (our slugs), `hash` (Steam's
+`market_hash_name`), `i` (an inspect link you already have) or `item` (a `SkinPlacement`, encoded with
+this package's codec). Anything else from the endpoint's vocabulary, like `view`, `glove` or the lone
+`sticker=` subject, goes through `params`.
+
+The URL is written cache-stable: one fixed parameter order, numbers in their shortest form, and
+`trim`/`rain`/`shadows` left out when `false`. The same picture always gets the same URL, so a repeat
+is a free cache hit rather than a second render.
+
+A non-2xx answer throws `ImageError`:
+
+```ts
+try {
+  await fetchImage({ hash: 'AK-47 | Case Hardened', key })
+} catch (error) {
+  if (isImageError(error)) {
+    error.status      // 503
+    error.code        // 'busy' | 'overloaded' | 'timeout' | 'rate-limited' | 'unknown-item' | ...
+    error.retryable   // true for 429, 502, 503, 504 - the URL is fine, try again
+    error.retryAfter  // seconds, from Retry-After
+    error.problems    // the renderer's full list
+  }
+}
+```
+
+A body that is not the endpoint's JSON (a proxy's HTML error page) comes back as
+`code: 'unexpected-response'` instead of a `SyntaxError`. Network failures are not wrapped.
+`baseUrl` points it somewhere else, a local API or your own proxy.
+
+---
+
 ## API reference
 
 ### Config
@@ -964,7 +1033,14 @@ The C4 - `C4_DEFINDEX` · `C4_WEAPON_ID` · `C4_NAME` · `C4_PAINT_INDEX` · `C4
 `buildInspectUrl` · `readInspectUrl` · `toEconItem` · `fromEconItem` · `toGameCommand` ·
 `isLegacyInspectUrl` · `EconItem` - plus everything from `/placement`, re-exported.
 
-Everything in this section and the one above it is also on the root `@skinhub/cdn` export.
+### `@skinhub/cdn/image`
+`imageUrl` · `fetchImage` · `readImageMeta` · `readImageError` · `ImageError` · `isImageError` ·
+`SKINHUB_IMAGE_BASE_URL` · `IMAGE_ERROR_CODES` · `IMAGE_MAPS` · `ImageOptions` ·
+`FetchImageOptions` · `ImageResult` · `FetchedImage` · `NotModifiedImage` · `ImageMeta` ·
+`ImageCacheStatus` · `ImageErrorCode` · `ImageFormat` · `ImageComposite` · `ImageSide` ·
+`ImageMap` · `ImageTime` · `ImageScalePreset` · `ImageParamValue`
+
+Everything in the last three sections is also on the root `@skinhub/cdn` export.
 
 ---
 

@@ -99,6 +99,8 @@ const CASES: Case[] = [
 	{ name: 'inspect-node', module: 'inspect.js', importLine: uses('buildInspectUrl'), target: 'node' },
 	{ name: 'inspect-browser', module: 'inspect.js', importLine: uses('buildInspectUrl'), target: 'browser' },
 	{ name: 'inspect-read-browser', module: 'inspect.js', importLine: uses('readInspectUrl'), target: 'browser' },
+	{ name: 'image-browser', module: 'image.js', importLine: uses('fetchImage'), target: 'browser' },
+	{ name: 'barrel-image', module: 'index.js', importLine: uses('imageUrl'), target: 'browser' },
 	...Object.entries(DATASETS).map(([file, [fn]]): Case => ({
 		name: `dataset-${file}`,
 		module: `datasets/${file}.js`,
@@ -196,6 +198,26 @@ describe('the barrel still shakes', () => {
 		expect(code).not.toContain('createInspectUrl')
 		expect(code).not.toContain('csgo_econ_action_preview')
 		expect(code.length).toBeLessThan(8_000)
+	})
+
+	test('a consumer of one dataset from the barrel carries none of the image client', () => {
+		expect(codeOf('barrel-one-dataset')).not.toContain('api.skinhub.gg')
+	})
+
+	test('the image client builds for a browser and carries the codec but no CDN layer', () => {
+		// It needs the codec (stickers and a charm only reach the endpoint as ?i=) and nothing else:
+		// no CDN origin, no dataset, no cache.
+		for (const probe of ['image-browser', 'barrel-image']) {
+			const code = codeOf(probe)
+			expect({ probe, api: code.includes('api.skinhub.gg') }).toEqual({ probe, api: true })
+			expect({ probe, codec: code.includes('csgo_econ_action_preview') }).toEqual({ probe, codec: true })
+			expect({ probe, cdn: code.includes('cdn.skinhub.gg') }).toEqual({ probe, cdn: false })
+			expect({ probe, node: code.includes('node:') }).toEqual({ probe, node: false })
+			for (const [, [, jsonName]] of Object.entries(DATASETS)) {
+				expect({ probe, jsonName, present: code.includes(jsonName) }).toEqual({ probe, jsonName, present: false })
+			}
+			expect(code.length).toBeLessThan(40_000)
+		}
 	})
 
 	test('a consumer of buildInspectUrl from the barrel carries none of the datasets', () => {
@@ -346,6 +368,7 @@ describe('the published artefact', () => {
 			'fetch',
 			'placement',
 			'inspect',
+			'image',
 			'codec',
 			'catalog',
 			'query/index',

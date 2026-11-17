@@ -1,7 +1,7 @@
 {
 	"name": "@skinhub/cdn",
-	"version": "0.4.0",
-	"description": "Typed data layer over the SkinHub CS2 CDN - skins, stickers, gloves, agents, music kits, keychains, collectibles, pets and items_game, fetched at runtime with pluggable caching. Plus the CS2 inspect-link codec and the WeaponPaints row formats.",
+	"version": "0.5.0",
+	"description": "Typed data layer over the SkinHub CS2 CDN - skins, stickers, gloves, agents, music kits, keychains, collectibles, pets and items_game, fetched at runtime with pluggable caching. Plus the CS2 inspect-link codec, the WeaponPaints row formats and a typed client for the SkinHub image endpoint.",
 	"type": "module",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
@@ -76,6 +76,11 @@
 			"bun": "./src/inspect.ts",
 			"import": "./dist/inspect.js"
 		},
+		"./image": {
+			"types": "./dist/image.d.ts",
+			"bun": "./src/image.ts",
+			"import": "./dist/image.js"
+		},
 		"./package.json": "./package.json"
 	},
 	"files": ["dist", "src", "README.md"],
@@ -89,7 +94,7 @@
 	"bugs": {
 		"url": "https://github.com/SkinHubgg/skinhub-cdn/issues"
 	},
-	"keywords": ["cs2", "counter-strike", "skins", "stickers", "pets", "cdn", "inspect-url", "items_game", "weaponpaints"],
+	"keywords": ["cs2", "counter-strike", "skins", "stickers", "pets", "cdn", "inspect-url", "items_game", "weaponpaints", "render", "image"],
 	"publishConfig": {
 		"access": "public"
 	},

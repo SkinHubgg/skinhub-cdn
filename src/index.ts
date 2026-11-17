@@ -26,6 +26,10 @@
  * The one part of the query work that *does* fetch, `loadSkinIndex`, lives in `@skinhub/cdn/catalog`
  * and is re-exported here too — it is `fetchSkins` plus an index, so it belongs with the fetchers.
  *
+ * **The image endpoint client (`@skinhub/cdn/image`) is here because it needs the codec.** Stickers
+ * and a charm on a weapon reach `api.skinhub.gg/image` only as an inspect link, so `imageUrl` encodes
+ * a placement with `./inspect.ts`. It shares nothing with the CDN fetch layer: no origin, no cache.
+ *
  * **CS2 1.41.8.2 (2026-09-22)** added two things this package now covers: chicken pets
  * (`@skinhub/cdn/pets` - `data/pets.json`, `data/petVariants.json`, and the `wp_player_pets` row
  * codec, which `@skinhub/cdn/placement` also carries) and stickers on the C4, which the export
@@ -118,6 +122,32 @@ export {
 	type FetchLike,
 	inFlightCount,
 } from './fetch.js'
+export {
+	type FetchedImage,
+	type FetchImageOptions,
+	fetchImage,
+	IMAGE_ERROR_CODES,
+	IMAGE_MAPS,
+	type ImageCacheStatus,
+	type ImageComposite,
+	ImageError,
+	type ImageErrorCode,
+	type ImageFormat,
+	type ImageMap,
+	type ImageMeta,
+	type ImageOptions,
+	type ImageParamValue,
+	type ImageResult,
+	type ImageScalePreset,
+	type ImageSide,
+	type ImageTime,
+	imageUrl,
+	isImageError,
+	type NotModifiedImage,
+	readImageError,
+	readImageMeta,
+	SKINHUB_IMAGE_BASE_URL,
+} from './image.js'
 export {
 	buildInspectUrl,
 	type EconItem,
